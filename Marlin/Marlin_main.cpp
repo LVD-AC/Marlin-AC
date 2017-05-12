@@ -5143,7 +5143,7 @@ void home_all_axes() { gcode_G28(); }
                           _7p_double_circle ? 0.5 : 0),
                 pos[XYZ] = {cos(RADIANS(180 + 30 * axis)) * delta_calibration_radius * (1 + circles * 0.1),
                            sin(RADIANS(180 + 30 * axis)) * delta_calibration_radius * (1 + circles * 0.1), 0.0 };
-          if (!position_is_reachable(pos, true)) {
+          if (!position_is_reachable(pos, false)) {
             SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
             return;
           }
@@ -5212,13 +5212,13 @@ void home_all_axes() { gcode_G28(); }
         SERIAL_EOL;
       }
 
-      #if ENABLED(Z_PROBE_SLED)
-        DEPLOY_PROBE();
-      #endif
+      DEPLOY_PROBE();
 
       int8_t iterations = 0;
       
-      home_offset[Z_AXIS] -= probe_pt(0.0, 0.0 , true, 1); // 1st probe to set height
+      // 1st probe to set height
+
+      home_offset[Z_AXIS] -= probe_pt(0.0 + (X_PROBE_OFFSET_FROM_EXTRUDER), 0.0 + (Y_PROBE_OFFSET_FROM_EXTRUDER), false, 1);
       do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
 
       do {
@@ -5235,13 +5235,13 @@ void home_all_axes() { gcode_G28(); }
         // Probe the points
 
         if (!_7p_half_circle && !_7p_tripple_circle) { // probe the center
-          z_at_pt[0] += probe_pt(0.0, 0.0 , true, 1);
+          z_at_pt[0] += probe_pt(0.0 + (X_PROBE_OFFSET_FROM_EXTRUDER), 0.0 + (Y_PROBE_OFFSET_FROM_EXTRUDER), false, 1);
         }
         if (_7p_calibration) { // probe extra center points
           for (int8_t axis = _7p_multi_circle ? 11 : 9; axis > 0; axis -= _7p_multi_circle ? 2 : 4) {
             z_at_pt[0] += probe_pt(
-              cos(RADIANS(180 + 30 * axis)) * (0.1 * delta_calibration_radius),
-              sin(RADIANS(180 + 30 * axis)) * (0.1 * delta_calibration_radius), true, 1);
+              cos(RADIANS(180 + 30 * axis)) * (0.1 * delta_calibration_radius) + (X_PROBE_OFFSET_FROM_EXTRUDER),
+              sin(RADIANS(180 + 30 * axis)) * (0.1 * delta_calibration_radius) + (Y_PROBE_OFFSET_FROM_EXTRUDER), false, 1);
           }
           z_at_pt[0] /= float(_7p_double_circle ? 7 : probe_points);
         }
@@ -5255,9 +5255,9 @@ void home_all_axes() { gcode_G28(); }
             for (float circles = -offset_circles ; circles <= offset_circles; circles++) {
               z_at_pt[axis] += probe_pt(
                 cos(RADIANS(180 + 30 * axis)) * delta_calibration_radius *
-                (1 + circles * 0.1 * (zig_zag ? 1 : -1)),
+                (1 + circles * 0.1 * (zig_zag ? 1 : -1)) + (X_PROBE_OFFSET_FROM_EXTRUDER),
                 sin(RADIANS(180 + 30 * axis)) * delta_calibration_radius *
-                (1 + circles * 0.1 * (zig_zag ? 1 : -1)), true, 1);
+                (1 + circles * 0.1 * (zig_zag ? 1 : -1)) + (Y_PROBE_OFFSET_FROM_EXTRUDER), false, 1);
             }
             zig_zag = !zig_zag;
             z_at_pt[axis] /= (2 * offset_circles + 1);
@@ -5484,9 +5484,7 @@ void home_all_axes() { gcode_G28(); }
       #if HOTENDS > 1
         tool_change(old_tool_index, 0, true);
       #endif
-      #if ENABLED(Z_PROBE_SLED)
-        RETRACT_PROBE();
-      #endif
+      STOW_PROBE();
     }
 
   #endif // DELTA_AUTO_CALIBRATION

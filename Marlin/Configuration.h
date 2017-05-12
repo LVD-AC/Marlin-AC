@@ -74,7 +74,7 @@
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
-#define STRING_CONFIG_H_AUTHOR "(LVD, 1.1.1a-AC)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "(LVD, 1.1.1b-AC)" // Who made the changes.
 #define SHOW_BOOTSCREEN
 #define STRING_SPLASH_LINE1 SHORT_BUILD_VERSION // will be shown during bootup in line 1
 #define STRING_SPLASH_LINE2 WEBSITE_URL         // will be shown during bootup in line 2
@@ -440,7 +440,7 @@
   #define DELTA_RADIUS 100.00 //mm // get this value from auto calibrate
 
   // height from z=0 to home position
-  #define DELTA_HEIGHT 295.00 // get this value from auto calibrate - use G33 P1 at 1st time calibration
+  #define DELTA_HEIGHT 260.00 // get this value from auto calibrate - use G33 P1 at 1st time calibration
 
   // Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).
   #define DELTA_PRINTABLE_RADIUS 85.0
@@ -544,7 +544,7 @@
  * Override with M92
  *                                      X, Y, Z, E0 [, E1[, E2[, E3[, E4]]]]
  */
-#define DEFAULT_AXIS_STEPS_PER_UNIT   { 100, 100, 100, 100 }  // default steps per unit for Kossel (GT2, 20 tooth)
+#define DEFAULT_AXIS_STEPS_PER_UNIT   { 100, 100, 100, 88.888888 }  // default steps per unit for Kossel (GT2, 20 tooth)
 
 /**
  * Default Max Feed Rate (mm/s)
