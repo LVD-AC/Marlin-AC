@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Marlin 3D Printer Firmware
  * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
@@ -35,7 +35,11 @@
   /**
    * Marlin release version identifier
    */
-  #define SHORT_BUILD_VERSION "1.1.0b-AC"
+
+
+  #define SHORT_BUILD_VERSION "1.1.1-AC"
+
+
 
   /**
    * Verbose version identifier which should contain a reference to the location
@@ -48,7 +52,10 @@
    * here we define this default string as the date where the latest release
    * version was tagged.
    */
-  #define STRING_DISTRIBUTION_DATE "2017-05-12 12:00"
+
+
+  #define STRING_DISTRIBUTION_DATE "2017-05-12 18:00"
+ 
 
   /**
    * Required minimum Configuration.h and Configuration_adv.h file versions.
@@ -70,7 +77,7 @@
   /**
    * Defines a generic printer name to be output to the LCD after booting Marlin.
    */
-  #define MACHINE_NAME "3D Printer"
+  #define MACHINE_NAME "3D Delta Printer"
 
   /**
    * The SOURCE_CODE_URL is the location where users will find the Marlin Source
@@ -78,7 +85,7 @@
    * has a distinct Github fork— the Source Code URL should just be the main
    * Marlin repository.
    */
-  #define SOURCE_CODE_URL "https://github.com/MarlinFirmware/Marlin"
+  #define SOURCE_CODE_URL "https://github.com/LVD-AC/Marlin-AC"
 
   /**
    * Default generic printer UUID.
