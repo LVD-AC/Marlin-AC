@@ -35,7 +35,7 @@
   /**
    * Marlin release version identifier
    */
-  #define SHORT_BUILD_VERSION "1.1.2-AC"
+  #define SHORT_BUILD_VERSION "1.1.3-AC"
 
   /**
    * Verbose version identifier which should contain a reference to the location
@@ -48,7 +48,7 @@
    * here we define this default string as the date where the latest release
    * version was tagged.
    */
-  #define STRING_DISTRIBUTION_DATE "2017-06-02 12:00"
+  #define STRING_DISTRIBUTION_DATE "2017-06-04 12:00"
 
   /**
    * Required minimum Configuration.h and Configuration_adv.h file versions.
@@ -70,7 +70,7 @@
   /**
    * Defines a generic printer name to be output to the LCD after booting Marlin.
    */
-  #define MACHINE_NAME "3D Delta Printer"
+  #define MACHINE_NAME "3D Printer"
 
   /**
    * The SOURCE_CODE_URL is the location where users will find the Marlin Source
