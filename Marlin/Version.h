@@ -35,7 +35,7 @@
   /**
    * Marlin release version identifier
    */
-  #define SHORT_BUILD_VERSION "1.1.3"
+  #define SHORT_BUILD_VERSION "1.1.3-AC"
 
   /**
    * Verbose version identifier which should contain a reference to the location
@@ -78,7 +78,7 @@
    * has a distinct Github fork— the Source Code URL should just be the main
    * Marlin repository.
    */
-  #define SOURCE_CODE_URL "https://github.com/MarlinFirmware/Marlin"
+  #define SOURCE_CODE_URL "https://github.com/LVD-AC/Marlin-AC"
 
   /**
    * Default generic printer UUID.
