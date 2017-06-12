@@ -15,38 +15,38 @@ This branch contains the latest tagged version of Marlin (currently 1.1.3 – Ju
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
-1.1.3-AC  <img src="pic/bugfix.png">
+1.1.3-AC
 - merge update to Marlin 1.1.3
 - LCD menu fix
 
-1.1.2-AC  <img src="pic/bugfix.png">
+1.1.2-AC
 - merge update to Marlin 1.1.2
 - E parameter
 - cleanup code
 
-1.1.1b-AC  <img src="pic/bugfix.png">
+1.1.1b-AC
 - eccentric probe fix
 - don't stow after each probe
 - deploy/stow fix
 
-1.1.1a-AC  <img src="pic/merged.png">
+1.1.1a-AC
 - test if outer radius is reachable
 - C-parameter : calibration precision
 - various small improvements
 
-1.1.1-AC    <img src="pic/merged.png">
+1.1.1-AC
 - first probe to set height and prevent scraping of the bed
 - completed naming and renamed tests to more comprehensive names
 - merge update to Marlin 1.1.1
 
-1.1.0b-AC   <img src="pic/merged.png">
+1.1.0b-AC
 - prevent premature end of the iterations
 
-1.1.0a-AC   <img src="pic/merged.png">
+1.1.0a-AC
 - A and O parameters made obsolete
 - quick homing with homing_delta()
 
-1.1.0-AC    <img src="pic/merged.png">
+1.1.0-AC
 - update bugfixes from Marlin-1.1.0-1
 
 
