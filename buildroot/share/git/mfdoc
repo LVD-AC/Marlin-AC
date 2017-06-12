@@ -37,7 +37,7 @@ opensite() {
 echo "Previewing MarlinDocumentation..."
 
 # wait to open the url for about 8s
-( sleep 45; opensite ) &
+( sleep 8; opensite ) &
 
 bundle exec jekyll serve --watch --incremental
 
