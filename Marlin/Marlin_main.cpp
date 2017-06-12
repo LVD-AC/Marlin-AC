@@ -5016,6 +5016,8 @@ void home_all_axes() { gcode_G28(true); }
      *      V0  Dry-run mode. Report settings and probe results. No calibration.
      *      V1  Report settings
      *      V2  Report settings and probe results
+     *
+     *   E   Engage the probe for each point
      */
     inline void gcode_G33() {
 
@@ -5038,6 +5040,7 @@ void home_all_axes() { gcode_G28(true); }
       }
 
       const bool towers_set = !parser.seen('T'),
+                 stow_after_each = parser.seen('E'),
                  _1p_calibration      = probe_points == 1,
                  _4p_calibration      = probe_points == 2,
                  _4p_towers_points    = _4p_calibration && towers_set,
@@ -5056,30 +5059,17 @@ void home_all_axes() { gcode_G28(true); }
                                _7p_double_circle    ? 0.5 : 0),
                     radius = (1 + circles * 0.1) * delta_calibration_radius;
         for (uint8_t axis = 1; axis < 13; ++axis) {
-          if (!position_is_reachable_by_probe_xy(cos(RADIANS(180 + 30 * axis)) * radius, sin(RADIANS(180 + 30 * axis)) * radius)) {
+          if (!position_is_reachable_xy(cos(RADIANS(180 + 30 * axis)) * radius, sin(RADIANS(180 + 30 * axis)) * radius)) {
             SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
             return;
           }
         }
       }
 
-      SERIAL_PROTOCOLLNPGM("G33 Auto Calibrate");
-
-      stepper.synchronize();
-      #if HAS_LEVELING
-        reset_bed_level(); // After calibration bed-level data is no longer valid
-      #endif
-      #if HOTENDS > 1
-        const uint8_t old_tool_index = active_extruder;
-        tool_change(0, 0, true);
-      #endif
-      setup_for_endstop_or_probe_move();
-
-      endstops.enable(true);
-      home_delta();
-      endstops.not_homing();
-
       const static char save_message[] PROGMEM = "Save with M500 and/or copy to Configuration.h";
+      const float dx = (X_PROBE_OFFSET_FROM_EXTRUDER),
+                  dy = (Y_PROBE_OFFSET_FROM_EXTRUDER);
+      int8_t iterations = 0;
       float test_precision,
             zero_std_dev = (verbose_level ? 999.0 : 0.0), // 0.0 in dry-run mode : forced end
             zero_std_dev_old = zero_std_dev,
@@ -5092,6 +5082,23 @@ void home_all_axes() { gcode_G28(true); }
             zh_old = home_offset[Z_AXIS],
             alpha_old = delta_tower_angle_trim[A_AXIS],
             beta_old = delta_tower_angle_trim[B_AXIS];
+
+
+      SERIAL_PROTOCOLLNPGM("G33 Auto Calibrate");
+
+      stepper.synchronize();
+      #if HAS_LEVELING
+        reset_bed_level(); // After calibration bed-level data is no longer valid
+      #endif
+      #if HOTENDS > 1
+        const uint8_t old_tool_index = active_extruder;
+        tool_change(0, 0, true);
+      #endif
+      setup_for_endstop_or_probe_move();
+      DEPLOY_PROBE();
+      endstops.enable(true);
+      home_delta();
+      endstops.not_homing();
 
       // print settings
 
@@ -5125,11 +5132,8 @@ void home_all_axes() { gcode_G28(true); }
         SERIAL_EOL;
       }
 
-      #if ENABLED(Z_PROBE_SLED)
-        DEPLOY_PROBE();
-      #endif
-
-      int8_t iterations = 0;
+      home_offset[Z_AXIS] -= probe_pt(dx, dy, stow_after_each, 1); // 1st probe to set height
+      do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
 
       home_offset[Z_AXIS] -= probe_pt(0.0, 0.0 , true, 1); // 1st probe to set height
       do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
@@ -5146,12 +5150,12 @@ void home_all_axes() { gcode_G28(true); }
         // Probe the points
 
         if (!_7p_half_circle && !_7p_triple_circle) { // probe the center
-          z_at_pt[0] += probe_pt(0.0, 0.0 , true, 1);
+          z_at_pt[0] += probe_pt(dx, dy, stow_after_each, 1);
         }
         if (_7p_calibration) { // probe extra center points
           for (int8_t axis = _7p_multi_circle ? 11 : 9; axis > 0; axis -= _7p_multi_circle ? 2 : 4) {
             const float a = RADIANS(180 + 30 * axis), r = delta_calibration_radius * 0.1;
-            z_at_pt[0] += probe_pt(cos(a) * r, sin(a) * r, true, 1); // TODO: Needs error handling
+            z_at_pt[0] += probe_pt(cos(a) * r + dx, sin(a) * r + dy, stow_after_each, 1);
           }
           z_at_pt[0] /= float(_7p_double_circle ? 7 : probe_points);
         }
@@ -5166,7 +5170,7 @@ void home_all_axes() { gcode_G28(true); }
             for (float circles = -offset_circles ; circles <= offset_circles; circles++) {
               const float a = RADIANS(180 + 30 * axis),
                           r = delta_calibration_radius * (1 + circles * (zig_zag ? 0.1 : -0.1));
-              z_at_pt[axis] += probe_pt(cos(a) * r, sin(a) * r, true, 1); // TODO: Needs error handling
+              z_at_pt[axis] += probe_pt(cos(a) * r + dx, sin(a) * r + dy, stow_after_each, 1);
             }
             zig_zag = !zig_zag;
             z_at_pt[axis] /= (2 * offset_circles + 1);
@@ -5388,12 +5392,10 @@ void home_all_axes() { gcode_G28(true); }
       #if ENABLED(DELTA_HOME_TO_SAFE_ZONE)
         do_blocking_move_to_z(delta_clip_start_height);
       #endif
+      STOW_PROBE();
       clean_up_after_endstop_or_probe_move();
       #if HOTENDS > 1
         tool_change(old_tool_index, 0, true);
-      #endif
-      #if ENABLED(Z_PROBE_SLED)
-        RETRACT_PROBE();
       #endif
     }
 
@@ -5546,8 +5548,6 @@ void home_all_axes() { gcode_G28(true); }
 inline void gcode_G92() {
   bool didXYZ = false,
        didE = parser.seen('E');
-
-  if (!didE) stepper.synchronize();
 
   LOOP_XYZE(i) {
     if (parser.seen(axis_codes[i])) {
@@ -11827,7 +11827,7 @@ void prepare_move_to_destination() {
     else
       C2 = (HYPOT2(sx, sy) - (L1_2 + L2_2)) / (2.0 * L1 * L2);
 
-    S2 = sqrt(sq(C2) - 1);
+    S2 = sqrt(1 - sq(C2));
 
     // Unrotated Arm1 plus rotated Arm2 gives the distance from Center to End
     SK1 = L1 + L2 * C2;
