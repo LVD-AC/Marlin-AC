@@ -34,7 +34,7 @@ Marlin-AC is in constant development to make it perform better and more stable b
 1.1.1a-AC  <img src="pic/merged.png">
 - test if outer radius is reachable
 - C-parameter : calibration precision
-- various small improuvements
+- various small improvements
 
 - 1.1.0a-AC upto 1.1.1a-AC were merged into Bugfix-1.1.x and Marlin 1.1.2
 
