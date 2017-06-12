@@ -5092,7 +5092,6 @@ void home_all_axes() { gcode_G28(true); }
           }
         }
       }
-
       const static char save_message[] PROGMEM = "Save with M500 and/or copy to Configuration.h";
       const float dx = (X_PROBE_OFFSET_FROM_EXTRUDER),
                   dy = (Y_PROBE_OFFSET_FROM_EXTRUDER);
@@ -5160,6 +5159,9 @@ void home_all_axes() { gcode_G28(true); }
       }
 
       home_offset[Z_AXIS] -= probe_pt(dx, dy, stow_after_each, 1); // 1st probe to set height
+      do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
+
+      home_offset[Z_AXIS] -= probe_pt(0.0, 0.0 , true, 1); // 1st probe to set height
       do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
 
       do {
@@ -5291,7 +5293,7 @@ void home_all_axes() { gcode_G28(true); }
 
           recalc_delta_settings(delta_radius, delta_diagonal_rod);
         }
-        else if(zero_std_dev >= test_precision) {   // step one back
+        else if (zero_std_dev >= test_precision) {   // step one back
           COPY(endstop_adj, e_old);
           delta_radius = dr_old;
           home_offset[Z_AXIS] = zh_old;
