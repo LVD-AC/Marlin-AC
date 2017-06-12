@@ -17,7 +17,6 @@ Marlin-AC is in constant development to make it perform better and more stable b
 
 1.1.4-AC  <img src="pic/waiting.png">
 - merge update to Marlin 1.1.4
--...
 
 1.1.3-AC  <img src="pic/bugfix.png">
 - merge update to Marlin 1.1.3
