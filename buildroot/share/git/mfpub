@@ -2,11 +2,7 @@
 #
 # mfpub
 #
-# Use Jekyll to generate Marlin Documentation, which is then
-# git-pushed to Github to publish it to the live site.
-# This publishes the current branch, and doesn't force
-# changes to be pushed to the 'master' branch. Be sure to push
-# any permanent changes to 'master'.
+# Use Jekyll to publish Marlin Documentation to the HTML site
 #
 
 MFINFO=$(mfinfo "$@") || exit
@@ -22,45 +18,36 @@ if [[ $ORG != "MarlinFirmware" || $REPO != "MarlinDocumentation" ]]; then
   exit
 fi
 
-# Check out the named branch (or stay in current)
-git checkout $BRANCH
-
 if [[ $BRANCH == "gh-pages" ]]; then
-  echo "Can't build from 'gh-pages.' Only the Jekyll branches (based on 'master')."
+  echo "Can't build from 'gh-pages.' Only the Jekyll branches."
+  bundle exec jekyll serve --watch
   exit
 fi
 
-echo "Stashing any changes to files..."
-echo "Don't forget to update and push 'master'!"
+if [[ $BRANCH != "master" ]]; then
+  echo "Don't forget to update and push 'master'!"
+fi
+
+git checkout $BRANCH
+
+echo "Generating MarlinDocumentation..."
+
 # GOJF Card
 git stash
 
+TMPFOLDER=$( mktemp -d )
 COMMIT=$( git log --format="%H" -n 1 )
 
 # Clean out changes and other junk in the branch
+git reset --hard
 git clean -d -f
 
 # Push 'master' to the fork and make a proper PR...
 if [[ $BRANCH == "master" ]]; then
 
-  # Allow working directly with the main fork
-  echo
-  echo -n "Pushing to origin/master... "
+  if [ -z "$(git branch -vv | grep ^\* | grep \\[origin)" ]; then firstpush; fi
+
   git push -f origin
-
-  echo
-  echo -n "Pushing to upstream/master... "
-  git push -f upstream
-
-else
-
-  if [ -z "$(git branch -vv | grep ^\* | grep \\[origin)" ]; then
-    firstpush
-  else
-    echo
-    echo -n "Pushing to origin/$BRANCH... "
-    git push -f origin
-  fi
 
   TOOL=$(which gnome-open xdg-open open | awk '{ print $1 }')
   URL="https://github.com/$ORG/$REPO/compare/$TARG...$FORK:$BRANCH?expand=1"
@@ -79,22 +66,16 @@ fi
 # mv ./_plugins/jekyll-press.rb-disabled ./_plugins/jekyll-press.rb
 # bundle install
 
-echo
-echo "Generating MarlinDocumentation..."
-
-# build the site statically and proof it
 bundle exec jekyll build --profile --trace --no-watch
 bundle exec htmlproofer ./_site --only-4xx --allow-hash-href --check-favicon --check-html --url-swap ".*marlinfw.org/:/"
 
-# Sync the built site into a temporary folder
-TMPFOLDER=$( mktemp -d )
 rsync -av _site/ ${TMPFOLDER}/
 
 # Clean out changes and other junk in the branch
 git reset --hard
 git clean -d -f
 
-# Copy built-site into the gh-pages branch
+# Sync built-site with gh-pages
 git checkout gh-pages
 rsync -av ${TMPFOLDER}/ ./
 
@@ -103,12 +84,7 @@ git add --all
 git commit --message "Built from ${COMMIT}"
 git push upstream
 
-# remove the temporary folder
 rm -rf ${TMPFOLDER}
 
 # Go back to the branch we started from
 git checkout $BRANCH
-
-if [[ $BRANCH != "master" ]]; then
-  git stash pop
-fi

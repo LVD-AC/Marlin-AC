@@ -24,9 +24,8 @@
 #define HEX_PRINT_ROUTINES_H
 
 #include "MarlinConfig.h"
-#include "gcode.h"
 
-#if ENABLED(AUTO_BED_LEVELING_UBL) || ENABLED(M100_FREE_MEMORY_WATCHER) || ENABLED(DEBUG_GCODE_PARSER)
+#if ENABLED(AUTO_BED_LEVELING_UBL) || ENABLED(M100_FREE_MEMORY_WATCHER)
 
 //
 // Utility functions to create and print hex strings as nybble, byte, and word.
@@ -44,5 +43,5 @@ void print_hex_byte(const uint8_t b);
 void print_hex_word(const uint16_t w);
 void print_hex_address(const void * const w);
 
-#endif // AUTO_BED_LEVELING_UBL || M100_FREE_MEMORY_WATCHER || DEBUG_GCODE_PARSER
+#endif // AUTO_BED_LEVELING_UBL || M100_FREE_MEMORY_WATCHER
 #endif // HEX_PRINT_ROUTINES_H

@@ -118,10 +118,7 @@
 #define SDSS                53
 #define LED_PIN             13
 #define PS_ON_PIN            4
-
-#ifndef FILWIDTH_PIN
-  #define FILWIDTH_PIN       3   // Analog Input
-#endif
+#define FILWIDTH_PIN         3   // Analog Input
 
 //
 // LCD / Controller

@@ -99,10 +99,7 @@
 // Misc. Functions
 //
 #define SDSS               26
-
-#ifndef FILWIDTH_PIN
-  #define FILWIDTH_PIN      2   // Analog Input
-#endif
+#define FILWIDTH_PIN        2   // Analog Input
 
 //
 // LCD / Controller

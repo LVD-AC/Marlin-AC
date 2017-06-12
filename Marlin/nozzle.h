@@ -32,7 +32,7 @@
                   nozzle_clean_length = fabs(nozzle_clean_start_point[X_AXIS] - nozzle_clean_end_point[X_AXIS]), //abs x size of wipe pad
                   nozzle_clean_height = fabs(nozzle_clean_start_point[Y_AXIS] - nozzle_clean_end_point[Y_AXIS]); //abs y size of wipe pad
   constexpr bool nozzle_clean_horizontal = nozzle_clean_length >= nozzle_clean_height; //whether to zig-zag horizontally or vertically
-#endif // NOZZLE_CLEAN_FEATURE
+#endif //NOZZLE_CLEAN_FEATURE
 
 /**
  * @brief Nozzle class
@@ -50,10 +50,10 @@ class Nozzle {
      * @param strokes number of strokes to execute
      */
     static void stroke(
-      _UNUSED point_t const &start,
-      _UNUSED point_t const &end,
-      _UNUSED uint8_t const &strokes
-    ) _Os;
+      __attribute__((unused)) point_t const &start,
+      __attribute__((unused)) point_t const &end,
+      __attribute__((unused)) uint8_t const &strokes
+    ) __attribute__((optimize ("Os")));
 
     /**
      * @brief Zig-zag clean pattern
@@ -65,11 +65,11 @@ class Nozzle {
      * @param objects number of objects to create
      */
     static void zigzag(
-      _UNUSED point_t const &start,
-      _UNUSED point_t const &end,
-      _UNUSED uint8_t const &strokes,
-      _UNUSED uint8_t const &objects
-    ) _Os;
+      __attribute__((unused)) point_t const &start,
+      __attribute__((unused)) point_t const &end,
+      __attribute__((unused)) uint8_t const &strokes,
+      __attribute__((unused)) uint8_t const &objects
+    ) __attribute__((optimize ("Os")));
 
     /**
      * @brief Circular clean pattern
@@ -80,11 +80,11 @@ class Nozzle {
      * @param radius radius of circle
      */
     static void circle(
-      _UNUSED point_t const &start,
-      _UNUSED point_t const &middle,
-      _UNUSED uint8_t const &strokes,
-      _UNUSED float const &radius
-    ) _Os;
+      __attribute__((unused)) point_t const &start,
+      __attribute__((unused)) point_t const &middle,
+      __attribute__((unused)) uint8_t const &strokes,
+      __attribute__((unused)) float const &radius
+    ) __attribute__((optimize ("Os")));
 
   public:
     /**
@@ -95,15 +95,15 @@ class Nozzle {
      * @param argument depends on the cleaning pattern
      */
     static void clean(
-      _UNUSED uint8_t const &pattern,
-      _UNUSED uint8_t const &strokes,
-      _UNUSED float const &radius,
-      _UNUSED uint8_t const &objects = 0
-    ) _Os;
+      __attribute__((unused)) uint8_t const &pattern,
+      __attribute__((unused)) uint8_t const &strokes,
+      __attribute__((unused)) float const &radius,
+      __attribute__((unused)) uint8_t const &objects = 0
+    ) __attribute__((optimize ("Os")));
 
     static void park(
-      _UNUSED uint8_t const &z_action
-    ) _Os;
+      __attribute__((unused)) uint8_t const &z_action
+    ) __attribute__((optimize ("Os")));
 };
 
 #endif
