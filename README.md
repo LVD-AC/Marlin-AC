@@ -15,12 +15,12 @@ This branch contains the latest tagged version of Marlin (currently 1.1.2 – Ma
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
-1.1.2-AC  <img src="pic/waiting.png">
+1.1.2-AC  <img src="pic/bugfix.png">
 - merge update to Marlin 1.1.2
 - E parameter
 - cleanup code
 
-1.1.1b-AC  <img src="pic/waiting.png">
+1.1.1b-AC  <img src="pic/bugfix.png">
 - eccentric probe fix
 - don't stow after each probe
 - deploy/stow fix
