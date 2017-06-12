@@ -37,7 +37,7 @@
    */
 
 
-  #define SHORT_BUILD_VERSION "1.1.1-AC"
+  #define SHORT_BUILD_VERSION "1.1.1a-AC"
 
 
 
@@ -54,7 +54,7 @@
    */
 
 
-  #define STRING_DISTRIBUTION_DATE "2017-05-12 18:00"
+  #define STRING_DISTRIBUTION_DATE "2017-05-13 8:00"
  
 
   /**
