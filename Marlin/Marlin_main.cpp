@@ -5135,6 +5135,9 @@ void home_all_axes() { gcode_G28(true); }
       home_offset[Z_AXIS] -= probe_pt(dx, dy, stow_after_each, 1); // 1st probe to set height
       do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
 
+      home_offset[Z_AXIS] -= probe_pt(0.0, 0.0 , true, 1); // 1st probe to set height
+      do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
+
       do {
 
         float z_at_pt[13] = { 0.0 }, S1 = 0.0, S2 = 0.0;
@@ -5545,8 +5548,6 @@ void home_all_axes() { gcode_G28(true); }
 inline void gcode_G92() {
   bool didXYZ = false,
        didE = parser.seen('E');
-
-  if (!didE) stepper.synchronize();
 
   LOOP_XYZE(i) {
     if (parser.seen(axis_codes[i])) {
