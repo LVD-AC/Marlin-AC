@@ -5038,7 +5038,7 @@ void home_all_axes() { gcode_G28(true); }
      *
      *   Cn.nn Calibration precision; when omitted calibrates to maximum precision
      *   
-     *   Fn  Force to run at least n iterations
+     *   Fn  Force to run at least n iterations and takes the best result
      *
      *   Vn  Verbose level:
      *
