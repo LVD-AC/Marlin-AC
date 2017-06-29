@@ -5096,8 +5096,8 @@ void home_all_axes() { gcode_G28(true); }
         for (uint8_t axis = 1; axis < 13; ++axis) {
           const float rx = RAW_X_POSITION(cos(RADIANS(180 + 30 * axis)) * radius),
                       ry = RAW_Y_POSITION(sin(RADIANS(180 + 30 * axis)) * radius);
-          if (HYPOT2(rx, ry) <= sq(DELTA_PRINTABLE_RADIUS)
-           || HYPOT2(rx - X_PROBE_OFFSET_FROM_EXTRUDER, ry - Y_PROBE_OFFSET_FROM_EXTRUDER) < sq(DELTA_PHYSICAL_RADIUS)) {
+          if (HYPOT2(rx, ry) >= sq(DELTA_PRINTABLE_RADIUS)
+           || HYPOT2(rx - X_PROBE_OFFSET_FROM_EXTRUDER, ry - Y_PROBE_OFFSET_FROM_EXTRUDER) > sq(DELTA_PHYSICAL_RADIUS)) {
             SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
             return;
           }
@@ -5171,7 +5171,6 @@ void home_all_axes() { gcode_G28(true); }
       }
 
       home_offset[Z_AXIS] -= probe_pt(dx, dy, stow_after_each, 1); // 1st probe to set height
-      do_probe_raise(Z_CLEARANCE_BETWEEN_PROBES);
 
       do {
 
