@@ -5223,7 +5223,6 @@ void home_all_axes() { gcode_G28(true); }
         zero_std_dev_old = zero_std_dev;
         NOMORE(zero_std_dev_min, zero_std_dev);
         zero_std_dev = round(sqrt(S2 / N) * 1000.0) / 1000.0 + 0.00001;
-        if (zero_std_dev <= 0) zero_std_dev = 999.0;
 
         if (iterations == 1) home_offset[Z_AXIS] = zh_old; // reset height after 1st probe change
 
