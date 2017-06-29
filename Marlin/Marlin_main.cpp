@@ -5094,7 +5094,10 @@ void home_all_axes() { gcode_G28(true); }
                                _7p_double_circle    ? 0.5 : 0),
                     radius = (1 + circles * 0.1) * delta_calibration_radius;
         for (uint8_t axis = 1; axis < 13; ++axis) {
-          if (!position_is_reachable_xy(cos(RADIANS(180 + 30 * axis)) * radius, sin(RADIANS(180 + 30 * axis)) * radius)) {
+          const float rx = RAW_X_POSITION(cos(RADIANS(180 + 30 * axis)) * radius),
+                      ry = RAW_Y_POSITION(sin(RADIANS(180 + 30 * axis)) * radius);
+          if (HYPOT2(rx, ry) <= sq(DELTA_PRINTABLE_RADIUS)
+           || HYPOT2(rx - X_PROBE_OFFSET_FROM_EXTRUDER, ry - Y_PROBE_OFFSET_FROM_EXTRUDER) < sq(DELTA_PHYSICAL_RADIUS)) {
             SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
             return;
           }
