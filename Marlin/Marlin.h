@@ -455,7 +455,7 @@ void do_blocking_move_to_xy(const float &x, const float &y, const float &fr_mm_s
     // Both the nozzle and the probe must be able to reach the point.
     // This won't work on SCARA since the probe offset rotates with the arm.
 
-    return position_is_reachable_raw_xy(rx, ry, true)
+    return position_is_reachable_raw_xy(rx, ry)
         && position_is_reachable_raw_xy(rx - X_PROBE_OFFSET_FROM_EXTRUDER, ry - Y_PROBE_OFFSET_FROM_EXTRUDER, printable);
   }
 
