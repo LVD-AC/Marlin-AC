@@ -5125,6 +5125,7 @@ void home_all_axes() { gcode_G28(true); }
           }
         }
       }
+
       SERIAL_PROTOCOLLNPGM("G33 Auto Calibrate");
 
       stepper.synchronize();
