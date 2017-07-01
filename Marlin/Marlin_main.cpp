@@ -4988,9 +4988,9 @@ void home_all_axes() { gcode_G28(true); }
                 ypos = parser.seen('Y') ? parser.value_linear_units() : current_position[Y_AXIS] + Y_PROBE_OFFSET_FROM_EXTRUDER;
 
     #if ENABLED(DELTA)
-      if (!position_is_reachable_xy(x, y)) return;
+      if (!position_is_reachable_xy(xpos, ypos)) return;
     #else
-      if (!position_is_reachable_by_probe_xy(x, y)) return;
+      if (!position_is_reachable_by_probe_xy(xpos, ypos)) return;
     #endif
 
     // Disable leveling so the planner won't mess with us
