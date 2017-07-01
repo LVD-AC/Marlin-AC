@@ -2240,7 +2240,7 @@ static void clean_up_after_endstop_or_probe_move() {
    *   - Raise to the BETWEEN height
    * - Return the probed Z position
    */
-  float probe_pt(const float &x, const float &y, const bool stow/*=true*/, const int verbose_level/*=1*/, printable = true) {
+  float probe_pt(const float &x, const float &y, const bool stow/*=true*/, const int verbose_level/*=1*/, bool printable = true) {
     #if ENABLED(DEBUG_LEVELING_FEATURE)
       if (DEBUGGING(LEVELING)) {
         SERIAL_ECHOPAIR(">>> probe_pt(", x);
