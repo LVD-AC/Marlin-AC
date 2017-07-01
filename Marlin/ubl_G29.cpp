@@ -47,7 +47,7 @@
   float lcd_z_offset_edit();
   extern float meshedit_done;
   extern long babysteps_done;
-  extern float probe_pt(const float &x, const float &y, bool, int);
+  extern float probe_pt(const float &x, const float &y, bool, int, bool = true);
   extern bool set_probe_deployed(bool);
   extern void set_bed_leveling_enabled(bool);
 
