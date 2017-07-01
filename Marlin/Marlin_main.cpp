@@ -2250,8 +2250,11 @@ static void clean_up_after_endstop_or_probe_move() {
         DEBUG_POS("", current_position);
       }
     #endif
-
-    if (!position_is_reachable_by_probe_xy(x, y, false)) return NAN;
+    #if ENABLED(DELTA)
+      if (!position_is_reachable_xy(x, y)) return NAN;
+    #else
+      if (!position_is_reachable_by_probe_xy(x, y)) return NAN;
+    #endif
 
     const float old_feedrate_mm_s = feedrate_mm_s;
 
@@ -4984,7 +4987,11 @@ void home_all_axes() { gcode_G28(true); }
     const float xpos = parser.seen('X') ? parser.value_linear_units() : current_position[X_AXIS] + X_PROBE_OFFSET_FROM_EXTRUDER,
                 ypos = parser.seen('Y') ? parser.value_linear_units() : current_position[Y_AXIS] + Y_PROBE_OFFSET_FROM_EXTRUDER;
 
-    if (!position_is_reachable_by_probe_xy(xpos, ypos, false)) return;
+    #if ENABLED(DELTA)
+      if (!position_is_reachable_xy(xpos, ypos)) return;
+    #else
+      if (!position_is_reachable_by_probe_xy(xpos, ypos)) return;
+    #endif
 
     // Disable leveling so the planner won't mess with us
     #if HAS_LEVELING
@@ -5112,7 +5119,7 @@ void home_all_axes() { gcode_G28(true); }
                     r = (1 + circles * 0.1) * delta_calibration_radius;
         for (uint8_t axis = 1; axis < 13; ++axis) {
           const float a = RADIANS(180 + 30 * axis);
-          if (!position_is_reachable_by_probe_xy(cos(a) * r + dx, sin(a) * r + dy, false)) {
+          if (!position_is_reachable_xy(cos(a) * r + dx, sin(a) * r + dy)) {
             SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
             return;
           }
@@ -6653,7 +6660,7 @@ inline void gcode_M42() {
       }
     #else
       if (!position_is_reachable_by_probe_xy(X_probe_location, Y_probe_location)) {
-        SERIAL_PROTOCOLLNPGM("? (X,Y) location outside of probeable area.");
+        SERIAL_PROTOCOLLNPGM("? (X,Y) location outside of probeable radius.");
         return;
       }
     #endif
