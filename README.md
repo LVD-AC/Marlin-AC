@@ -18,6 +18,9 @@ Marlin-AC is in constant development to make it perform better and more stable b
 1.1.x-AC  <img src="pic/waiting.png">
 - ...
 
+1.1.3c-AC  <img src="pic/waiting.png">
+- alternative eccentric probe is_reachable fix
+
 1.1.3b-AC  <img src="pic/waiting.png">
 - some minor cleanup
 - re-arrange delta configs
