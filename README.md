@@ -18,6 +18,9 @@ Marlin-AC is in constant development to make it perform better and more stable b
 1.1.x-AC  <img src="pic/bugfix.png">
 - ...
 
+1.1.3d-AC  <img src="pic/waiting.png">
+- calibration with manual probing
+
 1.1.3c-AC  <img src="pic/bugfix.png">
 - alternative eccentric probe is_reachable fix
 
