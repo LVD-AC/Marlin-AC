@@ -15,13 +15,13 @@ This branch contains the latest tagged version of Marlin (currently 1.1.3 – Ju
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
-1.1.x-AC  <img src="pic/waiting.png">
+1.1.x-AC  <img src="pic/bugfix.png">
 - ...
 
-1.1.3c-AC  <img src="pic/waiting.png">
+1.1.3c-AC  <img src="pic/bugfix.png">
 - alternative eccentric probe is_reachable fix
 
-1.1.3b-AC  <img src="pic/waiting.png">
+1.1.3b-AC  <img src="pic/bugfix.png">
 - some minor cleanup
 - re-arrange delta configs
 - eccentric probe is_reachable test
