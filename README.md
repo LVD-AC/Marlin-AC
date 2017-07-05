@@ -15,6 +15,10 @@ This branch contains the latest tagged version of Marlin (currently 1.1.3 – Ju
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.4-AC
+- merge update to Marlin 1.1.4
+- LCD fixes for manual probing
+
 1.1.3d-AC
 - calibration with manual probing
 
