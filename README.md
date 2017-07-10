@@ -18,7 +18,7 @@ Marlin-AC is in constant development to make it perform better and more stable b
 1.1.x-AC
 - ...
 
-1.1.4-AC   <img src="pic/waiting.png">
+1.1.4-AC   <img src="pic/bugfix.png">
 - merge update to Marlin 1.1.4
 - LCD fixes for manual probing
 
