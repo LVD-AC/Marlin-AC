@@ -5623,7 +5623,7 @@ void home_all_axes() { gcode_G28(true); }
               }
               break;
 
-            case 3:
+            default:
               e_delta[A_AXIS] = (Z6(0) + Z2(1) - Z1(5) - Z1(9) - Z2(7) + Z1(11) + Z1(3)) * h_factor;
               e_delta[B_AXIS] = (Z6(0) - Z1(1) + Z2(5) - Z1(9) + Z1(7) - Z2(11) + Z1(3)) * h_factor;
               e_delta[C_AXIS] = (Z6(0) - Z1(1) - Z1(5) + Z2(9) + Z1(7) + Z1(11) - Z2(3)) * h_factor;
@@ -5633,18 +5633,6 @@ void home_all_axes() { gcode_G28(true); }
                 t_delta[A_AXIS] = (       - Z3(5) + Z3(9)         - Z3(11) + Z3(3)) * a_factor;
                 t_delta[B_AXIS] = ( Z3(1)         - Z3(9) + Z3(7)          - Z3(3)) * a_factor;
                 t_delta[C_AXIS] = (-Z3(1) + Z3(5)         - Z3(7) + Z3(11)        ) * a_factor;
-              }
-              break;
-
-            default:
-              e_delta[X_AXIS] = Z1050(0) + Z0350(1) - Z0175(5) - Z0175(9) - Z0350(7) + Z0175(11) + Z0175(3);
-              e_delta[Y_AXIS] = Z1050(0) - Z0175(1) + Z0350(5) - Z0175(9) + Z0175(7) - Z0350(11) + Z0175(3);
-              e_delta[Z_AXIS] = Z1050(0) - Z0175(1) - Z0175(5) + Z0350(9) + Z0175(7) + Z0175(11) - Z0350(3);
-              r_delta         = Z2250(0) - Z0375(1) - Z0375(5) - Z0375(9) - Z0375(7) - Z0375(11) - Z0375(3);
-
-              if (towers_set) {
-                t_alpha = Z0444(1) - Z0888(5) + Z0444(9) + Z0444(7) - Z0888(11) + Z0444(3);
-                t_beta  = Z0888(1) - Z0444(5) - Z0444(9) + Z0888(7) - Z0444(11) - Z0444(3);
               }
               break;
           }
