@@ -74,7 +74,7 @@
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
-#define STRING_CONFIG_H_AUTHOR "(LVD, 1.1.5-AC)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "(LVD, 1.1.5a-AC)" // Who made the changes.
 #define SHOW_BOOTSCREEN
 #define STRING_SPLASH_LINE1 SHORT_BUILD_VERSION // will be shown during bootup in line 1
 #define STRING_SPLASH_LINE2 WEBSITE_URL         // will be shown during bootup in line 2
@@ -366,9 +366,14 @@
   //#define  DEFAULT_Kd 440
 
   //E3D with 30MM fan
-  #define  DEFAULT_Kp 24.77
-  #define  DEFAULT_Ki 1.84
-  #define  DEFAULT_Kd 83.61
+  //#define  DEFAULT_Kp 24.77
+  //#define  DEFAULT_Ki 1.84
+  //#define  DEFAULT_Kd 83.61
+
+  //Flsun with new effector
+  #define  DEFAULT_Kp 25.72
+  #define  DEFAULT_Ki 2.01
+  #define  DEFAULT_Kd 82.16
 
 #endif // PIDTEMP
 
@@ -384,7 +389,7 @@
 // If your configuration is significantly different than this and you don't understand the issues involved, you probably
 // shouldn't use bed PID until someone else verifies your hardware works.
 // If this is enabled, find your own PID constants below.
-//#define PIDTEMPBED
+#define PIDTEMPBED
 
 //#define BED_LIMIT_SWITCHING
 
@@ -411,9 +416,14 @@
   //#define  DEFAULT_bedKd 1675.16
 
   //D-force
-  #define  DEFAULT_bedKp 22.97
-  #define  DEFAULT_bedKi 3.76
-  #define  DEFAULT_bedKd 29.2
+  //#define  DEFAULT_bedKp 22.97
+  //#define  DEFAULT_bedKi 3.76
+  //#define  DEFAULT_bedKd 29.2
+
+  //Flsun with glass
+  #define  DEFAULT_bedKp 405.81
+  #define  DEFAULT_bedKi 63.51
+  #define  DEFAULT_bedKd 648.23
 
   // FIND YOUR OWN: "M303 E-1 C8 S90" to run autotune on the bed at 90 degreesC for 8 cycles.
 #endif // PIDTEMPBED
