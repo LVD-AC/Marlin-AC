@@ -5483,7 +5483,7 @@ void home_all_axes() { gcode_G28(true); }
           return;
         endstops.not_homing();
       }
-      
+
       // print settings
 
       const char *checkingac = PSTR("Checking... AC"); // TODO: Make translatable string
@@ -5503,8 +5503,8 @@ void home_all_axes() { gcode_G28(true); }
 
         // Probe the points
 
-       if (!_0p_calibration) {
-         if (!_7p_half_circle && !_7p_triple_circle) { // probe the center
+        if (!_0p_calibration) {
+          if (!_7p_half_circle && !_7p_triple_circle) { // probe the center
             #if ENABLED(PROBE_MANUALLY)
               z_at_pt[0] += lcd_probe_pt(0, 0);
             #else
@@ -5649,7 +5649,7 @@ void home_all_axes() { gcode_G28(true); }
           float a_sum = 0.0;
           LOOP_XYZ(axis) a_sum += delta_tower_angle_trim[axis];
           LOOP_XYZ(axis) delta_tower_angle_trim[axis] -= a_sum / 3.0;
-          
+
           // adjust delta_height and endstops by the max amount
           const float z_temp = MAX3(endstop_adj[A_AXIS], endstop_adj[B_AXIS], endstop_adj[C_AXIS]);
           home_offset[Z_AXIS] -= z_temp;
