@@ -15,6 +15,12 @@ This branch contains the latest tagged version of Marlin (currently 1.1.5 – Au
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.5b-AC
+-documentation added
+-new matrices - G33 mach 2
+-A auto tune parameters
+
+
 1.1.5a-AC
 - simplified matrix names
 - new angle least squares normalization
