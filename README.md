@@ -17,6 +17,7 @@ Marlin-AC is in constant development to make it perform better and more stable b
 
 1.1.5c-AC
 - new matrices
+- move code to functions
 
 1.1.5b-AC
 - "mach 2" auto tune testing project
