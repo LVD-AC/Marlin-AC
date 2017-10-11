@@ -16,25 +16,25 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
 1.1.6-AC 
--merge update to Marlin 1.1.6
+- merge update to Marlin 1.1.6
 
 1.1.5d-AC 
--A parameter : auto tune calibration factors
+- A parameter : auto tune calibration factors
 
 1.1.5c-AC 
--new matrices
--move code to functions
+- new matrices
+- move code to functions
 
 1.1.5b-AC 
--documentation added
--new matrices - G33 mach 2
--A auto tune parameters
+- documentation added
+- new matrices - G33 mach 2
+- A auto tune parameters
 
 1.1.5a-AC 
--simplified matrix names
--new angle least squares normalization
--no normalizing on end-stops M666 and tower angles M665
--P0 normalize only (no probing)
+- simplified matrix names
+- new angle least squares normalization
+- no normalizing on end-stops M666 and tower angles M665
+- P0 normalize only (no probing)
 
 1.1.5-AC
 - merge update to Marlin 1.1.5
