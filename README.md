@@ -15,87 +15,87 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
-1.1.6b-AC   <img src="pic/waiting.png">
+1.1.6b-AC
 - universal number of calibration points
 - new probe grids
 
-1.1.6a-AC   <img src="pic/bugfix.png">
+1.1.6a-AC 
 - prepare for 2.0.0 release
 
-1.1.6-AC   <img src="pic/merged.png">
+1.1.6-AC
 - merge update to Marlin 1.1.6
 
-1.1.5d-AC   <img src="pic/bugfix.png">
+1.1.5d-AC
 - A parameter : auto tune calibration factors
 
-1.1.5c-AC   <img src="pic/merged.png">
+1.1.5c-AC
 - new matrices
 - move code to functions
 
-1.1.5b-AC   <img src="pic/closed.png">
+1.1.5b-AC
 - documentation added
 - new matrices - G33 mach 2
 - A auto tune parameters
 
-1.1.5a-AC   <img src="pic/merged.png">
+1.1.5a-AC
 - simplified matrix names
 - new angle least squares normalization
 - no normalizing on end-stops M666 and tower angles M665
 - P0 normalize only (no probing)
 
-1.1.5-AC   <img src="pic/merged.png">
+1.1.5-AC
 - merge update to Marlin 1.1.5
 
-1.1.4-AC   <img src="pic/merged.png">
+1.1.4-AC
 - merge update to Marlin 1.1.4
 - LCD fixes for manual probing
 
-1.1.3d-AC  <img src="pic/merged.png">
+1.1.3d-AC
 - calibration with manual probing
 
-1.1.3c-AC  <img src="pic/merged.png">
+1.1.3c-AC
 - alternative eccentric probe is_reachable fix
 
-1.1.3b-AC  <img src="pic/merged.png">
+1.1.3b-AC
 - some minor cleanup
 - re-arrange delta configs
 - eccentric probe is_reachable test
 
-1.1.3a-AC  <img src="pic/merged.png">
+1.1.3a-AC
 - F parameter
 
-1.1.3-AC  <img src="pic/merged.png">
+1.1.3-AC
 - merge update to Marlin 1.1.3
 - LCD menu fix
 
-1.1.2-AC  <img src="pic/merged.png">
+1.1.2-AC
 - merge update to Marlin 1.1.2
 - E parameter
 - cleanup code
 
-1.1.1b-AC  <img src="pic/merged.png">
+1.1.1b-AC
 - eccentric probe fix
 - don't stow after each probe
 - deploy/stow fix
 
-1.1.1a-AC  <img src="pic/merged.png">
+1.1.1a-AC
 - test if outer radius is reachable
 - C-parameter : calibration precision
 - various small improvements
 
-1.1.1-AC    <img src="pic/merged.png">
+1.1.1-AC
 - first probe to set height and prevent scraping of the bed
 - completed naming and renamed tests to more comprehensive names
 - merge update to Marlin 1.1.1
 
-1.1.0b-AC   <img src="pic/merged.png">
+1.1.0b-AC
 - prevent premature end of the iterations
 
-1.1.0a-AC   <img src="pic/merged.png">
+1.1.0a-AC
 - A and O parameters made obsolete
 - quick homing with homing_delta()
 
-1.1.0-AC    <img src="pic/merged.png">
+1.1.0-AC
 - update bugfixes from Marlin-1.1.0-1
 
 

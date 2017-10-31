@@ -5433,7 +5433,7 @@ void home_all_axes() { gcode_G28(true); }
     /**
      * After G33:
      *  - Move to the print ceiling (DELTA_HOME_TO_SAFE_ZONE only)
-     *  - Stow the probe
+     *  - Stow t<<<<<<< 1.1.x-AChe probe
      *  - Restore endstops state
      *  - Select the old tool, if needed
      */
@@ -5463,6 +5463,7 @@ void home_all_axes() { gcode_G28(true); }
                  _7p_2_intermediates  = probe_points == 5,
                  _7p_4_intermediates  = probe_points == 6,
                  _7p_6_intermediates  = probe_points == 7,
+
                  _7p_8_intermediates  = probe_points == 8,
                  _7p_11_intermediates = probe_points == 9,
                  _7p_14_intermediates = probe_points == 10,
