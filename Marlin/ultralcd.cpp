@@ -190,7 +190,7 @@ uint16_t max_display_update_time = 0;
     void lcd_control_retract_menu();
   #endif
 
-  #if ENABLED(DELTA_CALIBRATION_MENU)
+  #if ENABLED(DELTA_CALIBRATION_MENU) || ENABLED(DELTA_AUTO_CALIBRATION)
     void lcd_delta_calibrate_menu();
   #endif
 
@@ -2519,7 +2519,7 @@ void kill_screen(const char* lcd_msg) {
     // Move Axis
     //
     #if ENABLED(DELTA)
-      if (axis_homed[Z_AXIS])
+      if (axis_homed[X_AXIS] && axis_homed[Y_AXIS] && axis_homed[Z_AXIS])
     #endif
         MENU_ITEM(submenu, MSG_MOVE_AXIS, lcd_move_menu);
 
@@ -2628,7 +2628,7 @@ void kill_screen(const char* lcd_msg) {
     //
     // Delta Calibration
     //
-    #if ENABLED(DELTA_CALIBRATION_MENU)
+    #if ENABLED(DELTA_CALIBRATION_MENU) || ENABLED(DELTA_AUTO_CALIBRATION)
       MENU_ITEM(submenu, MSG_DELTA_CALIBRATE, lcd_delta_calibrate_menu);
     #endif
 
@@ -2637,7 +2637,7 @@ void kill_screen(const char* lcd_msg) {
 
   float move_menu_scale;
 
-  #if ENABLED(DELTA_CALIBRATION_MENU)
+  #if ENABLED(DELTA_CALIBRATION_MENU) || ENABLED(DELTA_AUTO_CALIBRATION)
 
     void lcd_move_z();
     void lcd_delta_calibrate_menu();
@@ -2693,25 +2693,25 @@ void kill_screen(const char* lcd_msg) {
     void _goto_center()  { _man_probe_pt(0,0); }
 
     static float _delta_height = DELTA_HEIGHT;
+
     void _lcd_set_delta_height() {
       home_offset[Z_AXIS] = _delta_height - DELTA_HEIGHT;
-      update_software_endstops(Z_AXIS);
+      recalc_delta_settings();
     }
 
     void lcd_delta_settings() {
       START_MENU();
       MENU_BACK(MSG_DELTA_CALIBRATE);
-      float Tz = 0.00;
-      MENU_ITEM_EDIT(float52, MSG_DELTA_DIAG_ROG, &delta_diagonal_rod, DELTA_DIAGONAL_ROD - 5.0, DELTA_DIAGONAL_ROD + 5.0);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_DELTA_DIAG_ROG, &delta_diagonal_rod, delta_diagonal_rod - 5.0, delta_diagonal_rod + 5.0, recalc_delta_settings);
       _delta_height = DELTA_HEIGHT + home_offset[Z_AXIS];
-      MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(float52, MSG_DELTA_HEIGHT, &_delta_height, _delta_height - 10.0, _delta_height + 10.0, _lcd_set_delta_height);
-      MENU_ITEM_EDIT(float43, "Ex", &delta_endstop_adj[A_AXIS], -5.0, 5.0);
-      MENU_ITEM_EDIT(float43, "Ey", &delta_endstop_adj[B_AXIS], -5.0, 5.0);
-      MENU_ITEM_EDIT(float43, "Ez", &delta_endstop_adj[C_AXIS], -5.0, 5.0);
-      MENU_ITEM_EDIT(float52, MSG_DELTA_RADIUS, &delta_radius, DELTA_RADIUS - 5.0, DELTA_RADIUS + 5.0);
-      MENU_ITEM_EDIT(float43, "Tx", &delta_tower_angle_trim[A_AXIS], -5.0, 5.0);
-      MENU_ITEM_EDIT(float43, "Ty", &delta_tower_angle_trim[B_AXIS], -5.0, 5.0);
-      MENU_ITEM_EDIT(float43, "Tz", &delta_tower_angle_trim[C_AXIS], -5.0, 5.0);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_DELTA_HEIGHT, &_delta_height, _delta_height - 10.0, _delta_height + 10.0, _lcd_set_delta_height);
+      MENU_ITEM_EDIT_CALLBACK(float43, "Ex", &delta_endstop_adj[A_AXIS], -5.0, 5.0, recalc_delta_settings);
+      MENU_ITEM_EDIT_CALLBACK(float43, "Ey", &delta_endstop_adj[B_AXIS], -5.0, 5.0, recalc_delta_settings);
+      MENU_ITEM_EDIT_CALLBACK(float43, "Ez", &delta_endstop_adj[C_AXIS], -5.0, 5.0, recalc_delta_settings);
+      MENU_ITEM_EDIT_CALLBACK(float52, MSG_DELTA_RADIUS, &delta_radius, delta_radius - 5.0, delta_radius + 5.0, recalc_delta_settings);
+      MENU_ITEM_EDIT_CALLBACK(float43, "Tx", &delta_tower_angle_trim[A_AXIS], -5.0, 5.0, recalc_delta_settings);
+      MENU_ITEM_EDIT_CALLBACK(float43, "Ty", &delta_tower_angle_trim[B_AXIS], -5.0, 5.0, recalc_delta_settings);
+      MENU_ITEM_EDIT_CALLBACK(float43, "Tz", &delta_tower_angle_trim[C_AXIS], -5.0, 5.0, recalc_delta_settings);
       END_MENU();
     }
 
@@ -2719,7 +2719,6 @@ void kill_screen(const char* lcd_msg) {
       START_MENU();
       MENU_BACK(MSG_MAIN);
       #if ENABLED(DELTA_AUTO_CALIBRATION)
-        MENU_ITEM(submenu, MSG_DELTA_SETTINGS, lcd_delta_settings);
         MENU_ITEM(gcode, MSG_DELTA_AUTO_CALIBRATE, PSTR("G33"));
         MENU_ITEM(gcode, MSG_DELTA_HEIGHT_CALIBRATE, PSTR("G33 P1"));
         #if ENABLED(EEPROM_SETTINGS)
@@ -2727,17 +2726,20 @@ void kill_screen(const char* lcd_msg) {
           MENU_ITEM(function, MSG_LOAD_EEPROM, lcd_load_settings);
         #endif
       #endif
-      MENU_ITEM(submenu, MSG_AUTO_HOME, _lcd_delta_calibrate_home);
-      if (axis_homed[Z_AXIS]) {
-        MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_X, _goto_tower_x);
-        MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_Y, _goto_tower_y);
-        MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_Z, _goto_tower_z);
-        MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_CENTER, _goto_center);
-      }
+      MENU_ITEM(submenu, MSG_DELTA_SETTINGS, lcd_delta_settings);
+      #if ENABLED(DELTA_CALIBRATION_MENU)
+        MENU_ITEM(submenu, MSG_AUTO_HOME, _lcd_delta_calibrate_home);
+        if (axis_homed[X_AXIS] && axis_homed[Y_AXIS] && axis_homed[Z_AXIS]) {
+          MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_X, _goto_tower_x);
+          MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_Y, _goto_tower_y);
+          MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_Z, _goto_tower_z);
+          MENU_ITEM(submenu, MSG_DELTA_CALIBRATE_CENTER, _goto_center);
+        }
+      #endif
       END_MENU();
     }
 
-  #endif // DELTA_CALIBRATION_MENU
+  #endif // DELTA_CALIBRATION_MENU || DELTA_AUTO_CALIBRATION
 
   #if IS_KINEMATIC
     extern float feedrate_mm_s;

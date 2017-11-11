@@ -197,7 +197,7 @@ void lcd_reset_status();
   float lcd_z_offset_edit();
 #endif
 
-#if ENABLED(DELTA_CALIBRATION_MENU)
+#if ENABLED(DELTA_CALIBRATION_MENU) || ENABLED(DELTA_AUTO_CALIBRATION)
   float lcd_probe_pt(const float &lx, const float &ly);
 #endif
 
