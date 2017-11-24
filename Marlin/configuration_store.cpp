@@ -36,13 +36,13 @@
  *
  */
 
-#define EEPROM_VERSION "V45"
+#define EEPROM_VERSION "V46"
 
 // Change EEPROM version if these are changed:
 #define EEPROM_OFFSET 100
 
 /**
- * V45 EEPROM Layout:
+ * V46 EEPROM Layout:
  *
  *  100  Version                                    (char x4)
  *  104  EEPROM CRC16                               (uint16_t)
@@ -93,15 +93,16 @@
  *  329  G29 S     ubl.state.storage_slot           (int8_t)
  *
  * DELTA:                                           48 bytes
- *  360  M665 H    delta_radius                     (float)
- *  348  M666 XYZ  delta_endstop_adj                (float x3)
- *  360  M665 R    delta_radius                     (float)
- *  364  M665 L    delta_diagonal_rod               (float)
- *  368  M665 S    delta_segments_per_second        (float)
- *  372  M665 B    delta_calibration_radius         (float)
- *  376  M665 X    delta_tower_angle_trim[A]        (float)
- *  380  M665 Y    delta_tower_angle_trim[B]        (float)
- *  384  M665 Z    delta_tower_angle_trim[C]        (float)
+ *  344  M666 H    delta_height                     (float)
+ *  348            raw_delta_height                 (float)
+ *  352  M666 XYZ  delta_endstop_adj                (float x3)
+ *  364  M665 R    delta_radius                     (float)
+ *  368  M665 L    delta_diagonal_rod               (float)
+ *  372  M665 S    delta_segments_per_second        (float)
+ *  376  M665 B    delta_calibration_radius         (float)
+ *  380  M665 X    delta_tower_angle_trim[A]        (float)
+ *  384  M665 Y    delta_tower_angle_trim[B]        (float)
+ *  388  M665 Z    delta_tower_angle_trim[C]        (float)
  *
  * Z_DUAL_ENDSTOPS:                                 48 bytes
  *  348  M666 Z    z_endstop_adj                    (float)
@@ -441,9 +442,13 @@ void MarlinSettings::postprocess() {
       EEPROM_WRITE(storage_slot);
     #endif // AUTO_BED_LEVELING_UBL
 
-    // 10 floats for DELTA / Z_DUAL_ENDSTOPS
+    // 12 floats for DELTA / [XYZ]_DUAL_ENDSTOPS
     #if ENABLED(DELTA)
       EEPROM_WRITE(delta_height);              // 1 float
+      #if DISABLED(DELTA_AUTO_CALIBRATION)
+        float raw_delta_height = NAN;
+      #endif
+      EEPROM_WRITE(raw_delta_height);          // 1 float
       EEPROM_WRITE(delta_endstop_adj);         // 3 floats
       EEPROM_WRITE(delta_radius);              // 1 float
       EEPROM_WRITE(delta_diagonal_rod);        // 1 float
@@ -451,7 +456,7 @@ void MarlinSettings::postprocess() {
       EEPROM_WRITE(delta_calibration_radius);  // 1 float
       EEPROM_WRITE(delta_tower_angle_trim);    // 3 floats
       dummy = 0.0f;
-      for (uint8_t q = 2; q--;) EEPROM_WRITE(dummy);
+      for (uint8_t q = 1; q--;) EEPROM_WRITE(dummy);
     #elif ENABLED(Z_DUAL_ENDSTOPS)
       EEPROM_WRITE(z_endstop_adj);             // 1 float
       dummy = 0.0f;
@@ -826,8 +831,16 @@ void MarlinSettings::postprocess() {
         EEPROM_READ(dummyui8);
       #endif // AUTO_BED_LEVELING_UBL
 
+      //
+      // DELTA Geometry or Dual Endstops offsets
+      //
+
       #if ENABLED(DELTA)
         EEPROM_READ(delta_height);              // 1 float
+        #if DISABLED(DELTA_AUTO_CALIBRATION)
+          float raw_delta_height;
+        #endif
+        EEPROM_READ(raw_delta_height);          // 1 float
         EEPROM_READ(delta_endstop_adj);         // 3 floats
         EEPROM_READ(delta_radius);              // 1 float
         EEPROM_READ(delta_diagonal_rod);        // 1 float
@@ -835,7 +848,7 @@ void MarlinSettings::postprocess() {
         EEPROM_READ(delta_calibration_radius);  // 1 float
         EEPROM_READ(delta_tower_angle_trim);    // 3 floats
         dummy = 0.0f;
-        for (uint8_t q=2; q--;) EEPROM_READ(dummy);
+        for (uint8_t q=1; q--;) EEPROM_READ(dummy);
       #elif ENABLED(Z_DUAL_ENDSTOPS)
         EEPROM_READ(z_endstop_adj);
         dummy = 0.0f;
@@ -1218,6 +1231,9 @@ void MarlinSettings::reset() {
     const float adj[ABC] = DELTA_ENDSTOP_ADJ,
                 dta[ABC] = DELTA_TOWER_ANGLE_TRIM;
     delta_height = DELTA_HEIGHT;
+    #if ENABLED(DELTA_AUTO_CALIBRATION)
+      raw_delta_height = NAN;
+    #endif
     COPY(delta_endstop_adj, adj);
     delta_radius = DELTA_RADIUS;
     delta_diagonal_rod = DELTA_DIAGONAL_ROD;
