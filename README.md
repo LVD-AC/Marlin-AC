@@ -15,6 +15,10 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.6d-AC   <img src="pic/bugfix.png">
+- delta_height variable
+- update to bugfix1.1.x G33 changes
+
 1.1.6c-AC   <img src="pic/bugfix.png">
 - Marlin 1.1.5 bugs fixed
 
