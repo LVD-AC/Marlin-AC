@@ -297,7 +297,8 @@ extern float soft_endstop_min[XYZ], soft_endstop_max[XYZ];
 #endif
 
 #if ENABLED(DELTA)
-  extern float delta_endstop_adj[ABC],
+  extern float delta_height,
+               delta_endstop_adj[ABC],
                delta_radius,
                delta_diagonal_rod,
                delta_calibration_radius,
@@ -486,11 +487,11 @@ void do_blocking_move_to_xy(const float &x, const float &y, const float &fr_mm_s
 
 #endif // CARTESIAN
 
-FORCE_INLINE bool position_is_reachable_by_probe_xy(const float &lx, const float &ly) {
+FORCE_INLINE bool position_is_reachable_by_probe(const float &lx, const float &ly) {
   return position_is_reachable_by_probe_raw_xy(RAW_X_POSITION(lx), RAW_Y_POSITION(ly));
 }
 
-FORCE_INLINE bool position_is_reachable_xy(const float &lx, const float &ly) {
+FORCE_INLINE bool position_is_reachable(const float &lx, const float &ly) {
   return position_is_reachable_raw_xy(RAW_X_POSITION(lx), RAW_Y_POSITION(ly));
 }
 
