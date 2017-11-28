@@ -15,6 +15,9 @@ This branch contains the latest tagged version of Marlin (currently 1.1.5 – Au
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.5d-AC
+- A parameter : auto tune calibration factors
+
 1.1.5c-AC
 - new matrices
 - move code to functions
