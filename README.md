@@ -8,12 +8,17 @@ This is the developers branch for Marlin-AC, always ahead of official Marlin. Fi
 
 ## Stable Release Branch
 
-This branch contains the latest tagged version of Marlin (currently 1.1.0-1 – May 2017) with all the additional AC developments to date.
+This branch contains the latest tagged version of Marlin (currently 1.1.1 – May 2017) with all the additional AC developments to date.
 
 
 ## Current Status: In Development
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
+
+1.1.1-AC
+- first probe to set height and prevent scraping of the bed
+- completed naming and renamed tests to more comprehensive names
+- merge update to Marlin 1.1.1
 
 1.1.0b-AC
 - prevent premature end of the iterations
