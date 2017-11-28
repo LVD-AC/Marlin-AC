@@ -206,6 +206,10 @@ MarlinSettings settings;
   extern void refresh_bed_level();
 #endif
 
+#if ENABLED(DELTA_AUTO_CALIBRATION)
+  extern void refresh_delta_auto_cal();
+#endif
+
 /**
  * Post-process after Retrieve or Reset
  */
@@ -245,6 +249,10 @@ void MarlinSettings::postprocess() {
   #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
     refresh_bed_level();
     //set_bed_leveling_enabled(leveling_is_on);
+  #endif
+
+  #if ENABLED(DELTA_AUTO_CALIBRATION)
+    refresh_delta_auto_cal();
   #endif
 
   #if HAS_MOTOR_CURRENT_PWM
