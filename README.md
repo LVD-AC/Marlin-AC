@@ -15,6 +15,11 @@ This branch contains the latest tagged version of Marlin (currently 1.1.1 – Ma
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.1b-AC
+- eccentric probe fix
+- don't stow after each probe
+- deploy/stow fix
+
 1.1.1a-AC
 - test if outer radius is reachable
 - C-parameter : calibration precision
