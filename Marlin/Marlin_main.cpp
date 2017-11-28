@@ -5085,7 +5085,9 @@ void home_all_axes() { gcode_G28(); }
         return;
       }
 
-      const bool do_height_only       = probe_points == 1,
+      const bool towers_set = !code_seen('T'),
+      
+                 do_height_only       = probe_points == 1,
                  do_center_and_towers = probe_points == 2,
                  do_all_positions     = probe_points == 3,
                  do_circle_x2         = probe_points == 5,
@@ -5095,16 +5097,21 @@ void home_all_axes() { gcode_G28(); }
                  point_averaging      = probe_points >= 4,
                  probe_center_plus_6  = probe_points >= 5;
 
-      const char negating_parameter = do_height_only ? 'A' : do_center_and_towers ? 'O' : 'T';
-      int8_t probe_mode = code_seen(negating_parameter) && code_value_bool() ? -probe_points : probe_points;
-
       SERIAL_PROTOCOLLNPGM("G33 Auto Calibrate");
 
+      stepper.synchronize();
       #if HAS_LEVELING
-        set_bed_leveling_enabled(false);
+        reset_bed_level(); //after calibration bed-level will no longer be valid
       #endif
+      #if HOTENDS > 1
+        const uint8_t old_tool_index = active_extruder;
+        tool_change(0, 0, true);
+      #endif
+      setup_for_endstop_or_probe_move();
 
-      home_all_axes();
+      endstops.enable(true);
+      home_delta();
+      endstops.not_homing();
 
       const static char save_message[] PROGMEM = "Save with M500 and/or copy to Configuration.h";
       float test_precision,
@@ -5140,7 +5147,7 @@ void home_all_axes() { gcode_G28(); }
         SERIAL_PROTOCOLPAIR("    Radius:", delta_radius);
       }
       SERIAL_EOL;
-      if (probe_mode > 2) { // negative disables tower angles
+      if (probe_center_plus_3 && towers_set) {
         SERIAL_PROTOCOLPGM(".Tower angle :    Tx:");
         if (delta_tower_angle_trim[A_AXIS] >= 0) SERIAL_CHAR('+');
         SERIAL_PROTOCOL_F(delta_tower_angle_trim[A_AXIS], 2);
@@ -5186,7 +5193,7 @@ void home_all_axes() { gcode_G28(); }
         }
         if (!do_height_only) {  // probe the radius
           bool zig_zag = true;
-          for (uint8_t axis = (probe_mode == -2 ? 3 : 1); axis < 13;
+          for (uint8_t axis = ((probe_points == 2 && !towers_set) ? 3 : 1); axis < 13;
                        axis += (do_center_and_towers ? 4 : do_all_positions ? 2 : 1)) {
             float offset_circles = (do_circle_x4 ? (zig_zag ? 1.5 : 1.0) :
                                     do_circle_x3 ? (zig_zag ? 1.0 : 0.5) :
@@ -5205,14 +5212,14 @@ void home_all_axes() { gcode_G28(); }
           }
         }
         if (point_averaging) // average intermediates to tower and opposites
-          for (uint8_t axis = 1; axis <= 11; axis += 2)
+          for (uint8_t axis = 1; axis < 13; axis += 2)
             z_at_pt[axis] = (z_at_pt[axis] + (z_at_pt[axis + 1] + z_at_pt[(axis + 10) % 12 + 1]) / 2.0) / 2.0;
 
         S1 += z_at_pt[0];
         S2 += sq(z_at_pt[0]);
         N++;
         if (!do_height_only) // std dev from zero plane
-          for (uint8_t axis = (probe_mode == -2 ? 3 : 1); axis < 13; axis += (do_center_and_towers ? 4 : 2)) {
+          for (uint8_t axis = ((probe_points == 2 && !towers_set) ? 3 : 1); axis < 13; axis += (do_center_and_towers ? 4 : 2)) {
             S1 += z_at_pt[axis];
             S2 += sq(z_at_pt[axis]);
             N++;
@@ -5247,25 +5254,25 @@ void home_all_axes() { gcode_G28(); }
           #define Z0444(I) ZP(a_factor * 4.0 / 9.0, I)
           #define Z0888(I) ZP(a_factor * 8.0 / 9.0, I)
 
-          switch (probe_mode) {
-            case -1:
-              test_precision = 0.00;
+          switch (probe_points) {
             case 1:
+              test_precision = 0.00;
               LOOP_XYZ(i) e_delta[i] = Z1000(0);
               break;
 
             case 2:
-              e_delta[X_AXIS] = Z1050(0) + Z0700(1) - Z0350(5) - Z0350(9);
-              e_delta[Y_AXIS] = Z1050(0) - Z0350(1) + Z0700(5) - Z0350(9);
-              e_delta[Z_AXIS] = Z1050(0) - Z0350(1) - Z0350(5) + Z0700(9);
-              r_delta         = Z2250(0) - Z0750(1) - Z0750(5) - Z0750(9);
-              break;
-
-            case -2:
-              e_delta[X_AXIS] = Z1050(0) - Z0700(7) + Z0350(11) + Z0350(3);
-              e_delta[Y_AXIS] = Z1050(0) + Z0350(7) - Z0700(11) + Z0350(3);
-              e_delta[Z_AXIS] = Z1050(0) + Z0350(7) + Z0350(11) - Z0700(3);
-              r_delta         = Z2250(0) - Z0750(7) - Z0750(11) - Z0750(3);
+              if (towers_set) {
+                e_delta[X_AXIS] = Z1050(0) + Z0700(1) - Z0350(5) - Z0350(9);
+                e_delta[Y_AXIS] = Z1050(0) - Z0350(1) + Z0700(5) - Z0350(9);
+                e_delta[Z_AXIS] = Z1050(0) - Z0350(1) - Z0350(5) + Z0700(9);
+                r_delta         = Z2250(0) - Z0750(1) - Z0750(5) - Z0750(9);
+              }
+              else {
+                e_delta[X_AXIS] = Z1050(0) - Z0700(7) + Z0350(11) + Z0350(3);
+                e_delta[Y_AXIS] = Z1050(0) + Z0350(7) - Z0700(11) + Z0350(3);
+                e_delta[Z_AXIS] = Z1050(0) + Z0350(7) + Z0350(11) - Z0700(3);
+                r_delta         = Z2250(0) - Z0750(7) - Z0750(11) - Z0750(3);
+              }
               break;
 
             default:
@@ -5274,9 +5281,9 @@ void home_all_axes() { gcode_G28(); }
               e_delta[Z_AXIS] = Z1050(0) - Z0175(1) - Z0175(5) + Z0350(9) + Z0175(7) + Z0175(11) - Z0350(3);
               r_delta         = Z2250(0) - Z0375(1) - Z0375(5) - Z0375(9) - Z0375(7) - Z0375(11) - Z0375(3);
 
-              if (probe_mode > 0) {  // negative disables tower angles
-                t_alpha = + Z0444(1) - Z0888(5) + Z0444(9) + Z0444(7) - Z0888(11) + Z0444(3);
-                t_beta  = - Z0888(1) + Z0444(5) + Z0444(9) - Z0888(7) + Z0444(11) + Z0444(3);
+              if (towers_set) {
+                t_alpha = Z0444(1) - Z0888(5) + Z0444(9) + Z0444(7) - Z0888(11) + Z0444(3);
+                t_beta  = Z0888(1) - Z0444(5) - Z0444(9) + Z0888(7) - Z0444(11) - Z0444(3);
               }
               break;
           }
@@ -5309,7 +5316,7 @@ void home_all_axes() { gcode_G28(); }
           SERIAL_PROTOCOLPGM(".      c:");
           if (z_at_pt[0] > 0) SERIAL_CHAR('+');
           SERIAL_PROTOCOL_F(z_at_pt[0], 2);
-          if (probe_mode == 2 || probe_center_plus_3) {
+          if ((probe_points == 2 && towers_set) || probe_center_plus_3) {
             SERIAL_PROTOCOLPGM("     x:");
             if (z_at_pt[1] >= 0) SERIAL_CHAR('+');
             SERIAL_PROTOCOL_F(z_at_pt[1], 2);
@@ -5320,8 +5327,8 @@ void home_all_axes() { gcode_G28(); }
             if (z_at_pt[9] >= 0) SERIAL_CHAR('+');
             SERIAL_PROTOCOL_F(z_at_pt[9], 2);
           }
-          if (probe_mode != -2) SERIAL_EOL;
-          if (probe_mode == -2 || probe_center_plus_3) {
+          if ((probe_points != 2 || towers_set)) SERIAL_EOL;
+          if ((probe_points == 2 && !towers_set) || probe_center_plus_3) {
             if (probe_center_plus_3) {
               SERIAL_CHAR('.');
               SERIAL_PROTOCOL_SP(13);
@@ -5371,7 +5378,7 @@ void home_all_axes() { gcode_G28(); }
             SERIAL_PROTOCOLPAIR("    Radius:", delta_radius);
           }
           SERIAL_EOL;
-          if (probe_mode > 2) { // negative disables tower angles
+          if (probe_center_plus_3 && towers_set) {
             SERIAL_PROTOCOLPGM(".Tower angle :    Tx:");
             if (delta_tower_angle_trim[A_AXIS] >= 0) SERIAL_CHAR('+');
             SERIAL_PROTOCOL_F(delta_tower_angle_trim[A_AXIS], 2);
@@ -5403,12 +5410,19 @@ void home_all_axes() { gcode_G28(); }
           }
         }
 
-        stepper.synchronize();
-
-        home_all_axes();
+        endstops.enable(true);
+        home_delta();
+        endstops.not_homing();
 
       } while (zero_std_dev < test_precision && iterations < 31);
 
+      #if ENABLED(DELTA_HOME_TO_SAFE_ZONE)
+        do_blocking_move_to_z(delta_clip_start_height);
+      #endif
+      clean_up_after_endstop_or_probe_move();
+      #if HOTENDS > 1
+        tool_change(old_tool_index, 0, true);
+      #endif
       #if ENABLED(Z_PROBE_SLED)
         RETRACT_PROBE();
       #endif
