@@ -15,6 +15,9 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.6a-AC 
+- prepare for 2.0.0 release
+
 1.1.6-AC 
 - merge update to Marlin 1.1.6
 
