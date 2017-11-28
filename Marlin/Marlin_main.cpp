@@ -5773,7 +5773,7 @@ void home_all_axes() { gcode_G28(true); }
 
     if (auto_tune) {
       #if HAS_BED_PROBE
-        if (isnan(raw_delta_height) ? true : !G33_auto_tune()) {
+        if (!G33_auto_tune()) {
           SERIAL_PROTOCOLPGM("Calibrate printer first");
           SERIAL_EOL();
         }
@@ -5782,33 +5782,6 @@ void home_all_axes() { gcode_G28(true); }
       #endif
       return G33_CLEANUP();
     }
-
-    // inititialze raw height with one probe
-    if (isnan(raw_delta_height)) {
-      SERIAL_PROTOCOLPGM("Initialzing...");
-      SERIAL_EOL();
-      raw_delta_height = delta_height;
-      #if HAS_BED_PROBE
-        setup_for_endstop_or_probe_move();
-        endstops.enable(true);
-        if (!home_delta())
-          return;
-        endstops.not_homing();
-        raw_delta_height += zprobe_zoffset - calibration_probe(0, 0, stow_after_each);
-        if (isnan(raw_delta_height)) {
-          SERIAL_PROTOCOLPGM("Correct delta_height with M665 H");
-          SERIAL_EOL();
-          return G33_CLEANUP();
-        }
-      #endif
-    }
-
-    // reset height to raw position;
-    delta_height = raw_delta_height
-    #if HAS_BED_PROBE
-      - zprobe_zoffset
-    #endif
-    ;
 
     setup_for_endstop_or_probe_move();
     endstops.enable(true);
@@ -9889,6 +9862,10 @@ inline void gcode_M502() {
           thermalManager.babystep_axis(Z_AXIS, -LROUND(diff * planner.axis_steps_per_mm[Z_AXIS]));
       #else
         UNUSED(no_babystep);
+      #endif
+
+      #if ENABLED(DELTA_HEIGHT_FOLLOWS_Z_OFFSET_CHANGE) // to keep G33-data intact
+        delta_height -= zprobe_zoffset - last_zoffset;
       #endif
     }
 

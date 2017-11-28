@@ -36,13 +36,13 @@
  *
  */
 
-#define EEPROM_VERSION "V46"
+#define EEPROM_VERSION "V44"
 
 // Change EEPROM version if these are changed:
 #define EEPROM_OFFSET 100
 
 /**
- * V46 EEPROM Layout:
+ * V44 EEPROM Layout:
  *
  *  100  Version                                    (char x4)
  *  104  EEPROM CRC16                               (uint16_t)
@@ -94,7 +94,6 @@
  *
  * DELTA:                                           48 bytes
  *  344  M666 H    delta_height                     (float)
- *  348            raw_delta_height                 (float)
  *  352  M666 XYZ  delta_endstop_adj                (float x3)
  *  364  M665 R    delta_radius                     (float)
  *  368  M665 L    delta_diagonal_rod               (float)
@@ -442,7 +441,7 @@ void MarlinSettings::postprocess() {
       EEPROM_WRITE(storage_slot);
     #endif // AUTO_BED_LEVELING_UBL
 
-    // 12 floats for DELTA / [XYZ]_DUAL_ENDSTOPS
+    // 11 floats for DELTA / [XYZ]_DUAL_ENDSTOPS
     #if ENABLED(DELTA)
       EEPROM_WRITE(delta_height);              // 1 float
       #if DISABLED(DELTA_AUTO_CALIBRATION)
