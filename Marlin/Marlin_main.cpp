@@ -3007,12 +3007,12 @@ static void homeaxis(const AxisEnum axis) {
     // so here it re-homes each tower in turn.
     // Delta homing treats the axes as normal linear axes.
 
-    // retrace by the amount specified in endstop_adj
-    if (endstop_adj[axis] * Z_HOME_DIR < 0) {
+    // retrace by the amount specified in endstop_adj + additional 0.1mm in order to have minimum steps
+    if (endstop_adj[axis] * Z_HOME_DIR <= 0) {
       #if ENABLED(DEBUG_LEVELING_FEATURE)
         if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("endstop_adj:");
       #endif
-      do_homing_move(axis, endstop_adj[axis]);
+      do_homing_move(axis, endstop_adj[axis] - 0.1);
     }
 
   #else
@@ -5094,6 +5094,8 @@ void home_all_axes() { gcode_G28(); }
      *
      *   T  No tower angle correction calibration
      *   
+     *   Cn.nn Calibration precision; when omitted calibrates to maximum precision
+     *   
      *   Vn  Verbose level:
      *
      *      V0  Dry-run mode. Report settings and probe results. No calibration.
@@ -5114,6 +5116,12 @@ void home_all_axes() { gcode_G28(); }
         return;
       }
 
+      const float calibration_precision = code_seen('C') ? code_value_float() : 0.0;
+      if (calibration_precision < 0) {
+        SERIAL_PROTOCOLLNPGM("?(C)alibration precision is implausible (>0).");
+        return;
+      }
+
       const bool towers_set = !code_seen('T'),
       
                  _1p_calibration      = probe_points == 1,
@@ -5127,6 +5135,20 @@ void home_all_axes() { gcode_G28(); }
                  _7p_quadruple_circle = probe_points == 7,
                  _7p_multi_circle     = _7p_double_circle || _7p_tripple_circle || _7p_quadruple_circle,
                  _7p_intermed_points  = _7p_calibration && !_7p_half_circle;
+
+      if (!_1p_calibration) {  // test if the outer radius is reachable
+        for (uint8_t axis = 1; axis < 13; ++axis) {
+          float circles = (_7p_quadruple_circle ? 1.5 :
+                          _7p_tripple_circle ? 1.0 :
+                          _7p_double_circle ? 0.5 : 0),
+                pos[XYZ] = {cos(RADIANS(180 + 30 * axis)) * delta_calibration_radius * (1 + circles * 0.1),
+                           sin(RADIANS(180 + 30 * axis)) * delta_calibration_radius * (1 + circles * 0.1), 0.0 };
+          if (!position_is_reachable(pos, true)) {
+            SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
+            return;
+          }
+        }
+      }
 
       SERIAL_PROTOCOLLNPGM("G33 Auto Calibrate");
 
@@ -5261,7 +5283,7 @@ void home_all_axes() { gcode_G28(); }
 
         // Solve matrices
 
-        if (zero_std_dev < test_precision) {
+        if (zero_std_dev < test_precision && zero_std_dev > calibration_precision) {
           COPY(e_old, endstop_adj);
           dr_old = delta_radius;
           zh_old = home_offset[Z_AXIS];
@@ -5333,7 +5355,7 @@ void home_all_axes() { gcode_G28(); }
 
           recalc_delta_settings(delta_radius, delta_diagonal_rod);
         }
-        else {   // step one back
+        else if(zero_std_dev >= test_precision) {   // step one back
           COPY(endstop_adj, e_old);
           delta_radius = dr_old;
           home_offset[Z_AXIS] = zh_old;
@@ -5379,10 +5401,15 @@ void home_all_axes() { gcode_G28(); }
           }
         }
         if (test_precision != 0.0) {                                 // !forced end
-          if (zero_std_dev >= test_precision) {                      // end iterations
+          if (zero_std_dev >= test_precision || zero_std_dev <= calibration_precision) {  // end iterations
             SERIAL_PROTOCOLPGM("Calibration OK");
             SERIAL_PROTOCOL_SP(36);
-            SERIAL_PROTOCOLPGM("rolling back.");
+            if (zero_std_dev >= test_precision)
+              SERIAL_PROTOCOLPGM("rolling back.");
+            else {
+              SERIAL_PROTOCOLPGM("std dev:");
+              SERIAL_PROTOCOL_F(zero_std_dev, 3);
+            }            
             SERIAL_EOL;
             LCD_MESSAGEPGM("Calibration OK");
           }
@@ -5421,7 +5448,7 @@ void home_all_axes() { gcode_G28(); }
             SERIAL_PROTOCOLPGM("  Tz:+0.00");
             SERIAL_EOL;
           }
-          if (zero_std_dev >= test_precision)
+          if (zero_std_dev >= test_precision || zero_std_dev <= calibration_precision)
             serialprintPGM(save_message);
             SERIAL_EOL;
         }
@@ -5447,7 +5474,8 @@ void home_all_axes() { gcode_G28(); }
         home_delta();
         endstops.not_homing();
 
-      } while (zero_std_dev < test_precision && iterations < 31);
+      } 
+      while (zero_std_dev < test_precision && zero_std_dev > calibration_precision && iterations < 31);
 
       #if ENABLED(DELTA_HOME_TO_SAFE_ZONE)
         do_blocking_move_to_z(delta_clip_start_height);

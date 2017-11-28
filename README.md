@@ -15,6 +15,11 @@ This branch contains the latest tagged version of Marlin (currently 1.1.1 – Ma
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.1a-AC
+- test if outer radius is reachable
+- C-parameter : calibration precision
+- various small improvements
+
 1.1.1-AC
 - first probe to set height and prevent scraping of the bed
 - completed naming and renamed tests to more comprehensive names
