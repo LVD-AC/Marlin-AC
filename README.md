@@ -15,6 +15,9 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.6c-AC
+- Marlin 1.1.5 bugs fixed
+
 1.1.6b-AC
 - universal number of calibration points
 - new probe grids
