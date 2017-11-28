@@ -15,13 +15,15 @@ This branch contains the latest tagged version of Marlin (currently 1.1.0-1 – 
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.0b-AC
+- prevent premature end of the iterations
+
 1.1.0a-AC
 - A and O parameters made obsolete
 - quick homing with homing_delta()
 
 1.1.0-AC
 - update bugfixes from Marlin-1.1.0-1
-
 
 ## Marlin-AC Resources
 
