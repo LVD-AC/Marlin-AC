@@ -607,10 +607,6 @@ static uint8_t target_extruder;
 
   float delta[ABC];
 
-  // Initialized by G33
-  #if ENABLED(DELTA_AUTO_CALIBRATION)
-    float raw_delta_height;
-  #endif
   // Initialized by settings.load()
   float delta_height,
         delta_endstop_adj[ABC] = { 0 },
@@ -5738,7 +5734,7 @@ void home_all_axes() { gcode_G28(true); }
             delta_endstop_adj[C_AXIS]
           },
           dr_old = delta_radius,
-          zh_old = raw_delta_height,
+          zh_old = delta_height,
           ta_old[ABC] = {
             delta_tower_angle_trim[A_AXIS],
             delta_tower_angle_trim[B_AXIS],
@@ -5824,7 +5820,7 @@ void home_all_axes() { gcode_G28(true); }
         if (zero_std_dev < zero_std_dev_min) {
           COPY(e_old, delta_endstop_adj);
           dr_old = delta_radius;
-          zh_old = raw_delta_height;
+          zh_old = delta_height;
           COPY(ta_old, delta_tower_angle_trim);
         }
 
@@ -5908,7 +5904,7 @@ void home_all_axes() { gcode_G28(true); }
       else if (zero_std_dev >= test_precision) {   // step one back
         COPY(delta_endstop_adj, e_old);
         delta_radius = dr_old;
-        raw_delta_height = zh_old;
+        delta_height = zh_old;
         COPY(delta_tower_angle_trim, ta_old);
       }
 
@@ -5922,15 +5918,8 @@ void home_all_axes() { gcode_G28(true); }
 
         // adjust delta_height and endstops by the max amount
         const float z_temp = MAX3(delta_endstop_adj[A_AXIS], delta_endstop_adj[B_AXIS], delta_endstop_adj[C_AXIS]);
-        raw_delta_height -= z_temp;
+        delta_height -= z_temp;
         LOOP_XYZ(axis) delta_endstop_adj[axis] -= z_temp;
-
-        // reset height to raw position;
-        delta_height = raw_delta_height
-        #if HAS_BED_PROBE
-          - zprobe_zoffset
-        #endif
-        ;
       }
       recalc_delta_settings();
       NOMORE(zero_std_dev_min, zero_std_dev);

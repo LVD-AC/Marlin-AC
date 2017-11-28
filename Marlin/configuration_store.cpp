@@ -444,10 +444,6 @@ void MarlinSettings::postprocess() {
     // 11 floats for DELTA / [XYZ]_DUAL_ENDSTOPS
     #if ENABLED(DELTA)
       EEPROM_WRITE(delta_height);              // 1 float
-      #if DISABLED(DELTA_AUTO_CALIBRATION)
-        float raw_delta_height = NAN;
-      #endif
-      EEPROM_WRITE(raw_delta_height);          // 1 float
       EEPROM_WRITE(delta_endstop_adj);         // 3 floats
       EEPROM_WRITE(delta_radius);              // 1 float
       EEPROM_WRITE(delta_diagonal_rod);        // 1 float
@@ -836,10 +832,6 @@ void MarlinSettings::postprocess() {
 
       #if ENABLED(DELTA)
         EEPROM_READ(delta_height);              // 1 float
-        #if DISABLED(DELTA_AUTO_CALIBRATION)
-          float raw_delta_height;
-        #endif
-        EEPROM_READ(raw_delta_height);          // 1 float
         EEPROM_READ(delta_endstop_adj);         // 3 floats
         EEPROM_READ(delta_radius);              // 1 float
         EEPROM_READ(delta_diagonal_rod);        // 1 float
@@ -1230,9 +1222,6 @@ void MarlinSettings::reset() {
     const float adj[ABC] = DELTA_ENDSTOP_ADJ,
                 dta[ABC] = DELTA_TOWER_ANGLE_TRIM;
     delta_height = DELTA_HEIGHT;
-    #if ENABLED(DELTA_AUTO_CALIBRATION)
-      raw_delta_height = NAN;
-    #endif
     COPY(delta_endstop_adj, adj);
     delta_radius = DELTA_RADIUS;
     delta_diagonal_rod = DELTA_DIAGONAL_ROD;
