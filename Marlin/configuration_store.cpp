@@ -36,13 +36,13 @@
  *
  */
 
-#define EEPROM_VERSION "V41"
+#define EEPROM_VERSION "V45"
 
 // Change EEPROM version if these are changed:
 #define EEPROM_OFFSET 100
 
 /**
- * V41 EEPROM Layout:
+ * V45 EEPROM Layout:
  *
  *  100  Version                                    (char x4)
  *  104  EEPROM CRC16                               (uint16_t)
@@ -93,6 +93,7 @@
  *  329  G29 S     ubl.state.storage_slot           (int8_t)
  *
  * DELTA:                                           48 bytes
+ *  360  M665 H    delta_radius                     (float)
  *  348  M666 XYZ  delta_endstop_adj                (float x3)
  *  360  M665 R    delta_radius                     (float)
  *  364  M665 L    delta_diagonal_rod               (float)
@@ -336,15 +337,7 @@ void MarlinSettings::postprocess() {
     #if !HAS_HOME_OFFSET
       const float home_offset[XYZ] = { 0 };
     #endif
-    #if ENABLED(DELTA)
-      dummy = 0.0;
-      EEPROM_WRITE(dummy);
-      EEPROM_WRITE(dummy);
-      dummy = DELTA_HEIGHT + home_offset[Z_AXIS];
-      EEPROM_WRITE(dummy);
-    #else
-      EEPROM_WRITE(home_offset);
-    #endif
+    EEPROM_WRITE(home_offset);
 
     #if HOTENDS > 1
       // Skip hotend 0 which must be 0
@@ -450,6 +443,7 @@ void MarlinSettings::postprocess() {
 
     // 10 floats for DELTA / Z_DUAL_ENDSTOPS
     #if ENABLED(DELTA)
+      EEPROM_WRITE(delta_height);              // 1 float
       EEPROM_WRITE(delta_endstop_adj);         // 3 floats
       EEPROM_WRITE(delta_radius);              // 1 float
       EEPROM_WRITE(delta_diagonal_rod);        // 1 float
@@ -738,12 +732,6 @@ void MarlinSettings::postprocess() {
       #endif
       EEPROM_READ(home_offset);
 
-      #if ENABLED(DELTA)
-        home_offset[X_AXIS] = 0.0;
-        home_offset[Y_AXIS] = 0.0;
-        home_offset[Z_AXIS] -= DELTA_HEIGHT;
-      #endif
-
       #if HOTENDS > 1
         // Skip hotend 0 which must be 0
         for (uint8_t e = 1; e < HOTENDS; e++)
@@ -839,6 +827,7 @@ void MarlinSettings::postprocess() {
       #endif // AUTO_BED_LEVELING_UBL
 
       #if ENABLED(DELTA)
+        EEPROM_READ(delta_height);              // 1 float
         EEPROM_READ(delta_endstop_adj);         // 3 floats
         EEPROM_READ(delta_radius);              // 1 float
         EEPROM_READ(delta_diagonal_rod);        // 1 float
@@ -1228,13 +1217,13 @@ void MarlinSettings::reset() {
   #if ENABLED(DELTA)
     const float adj[ABC] = DELTA_ENDSTOP_ADJ,
                 dta[ABC] = DELTA_TOWER_ANGLE_TRIM;
+    delta_height = DELTA_HEIGHT;
     COPY(delta_endstop_adj, adj);
     delta_radius = DELTA_RADIUS;
     delta_diagonal_rod = DELTA_DIAGONAL_ROD;
     delta_segments_per_second = DELTA_SEGMENTS_PER_SECOND;
     delta_calibration_radius = DELTA_CALIBRATION_RADIUS;
     COPY(delta_tower_angle_trim, dta);
-    home_offset[Z_AXIS] = 0;
 
   #elif ENABLED(Z_DUAL_ENDSTOPS)
 
@@ -1651,7 +1640,7 @@ void MarlinSettings::reset() {
       CONFIG_ECHO_START;
       SERIAL_ECHOPAIR("  M665 L", LINEAR_UNIT(delta_diagonal_rod));
       SERIAL_ECHOPAIR(" R", LINEAR_UNIT(delta_radius));
-      SERIAL_ECHOPAIR(" H", LINEAR_UNIT(DELTA_HEIGHT + home_offset[Z_AXIS]));
+      SERIAL_ECHOPAIR(" H", LINEAR_UNIT(delta_height));
       SERIAL_ECHOPAIR(" S", delta_segments_per_second);
       SERIAL_ECHOPAIR(" B", LINEAR_UNIT(delta_calibration_radius));
       SERIAL_ECHOPAIR(" X", LINEAR_UNIT(delta_tower_angle_trim[A_AXIS]));

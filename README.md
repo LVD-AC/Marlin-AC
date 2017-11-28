@@ -15,6 +15,10 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.6d-AC
+- delta_height variable
+- update to bugfix1.1.x G33 changes
+
 1.1.6c-AC
 - Marlin 1.1.5 bugs fixed
 
@@ -32,13 +36,12 @@ Marlin-AC is in constant development to make it perform better and more stable b
 - A parameter : auto tune calibration factors
 
 1.1.5c-AC 
+- documentation added
 - new matrices
 - move code to functions
 
-1.1.5b-AC 
-- documentation added
-- new matrices - G33 mach 2
-- A auto tune parameters
+1.1.5b-AC
+- (abandoned)
 
 1.1.5a-AC 
 - simplified matrix names

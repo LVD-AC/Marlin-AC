@@ -496,7 +496,7 @@
               }
             }
 
-            if (!position_is_reachable_xy(g29_x_pos, g29_y_pos)) {
+            if (!position_is_reachable(g29_x_pos, g29_y_pos)) {
               SERIAL_PROTOCOLLNPGM("XY outside printable radius.");
               return;
             }
@@ -1489,7 +1489,7 @@
 
       mesh_index_pair location;
 
-      if (!position_is_reachable_xy(lx, ly)) {
+      if (!position_is_reachable(lx, ly)) {
         SERIAL_PROTOCOLLNPGM("(X,Y) outside printable radius.");
         return;
       }
