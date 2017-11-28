@@ -142,7 +142,7 @@
  * M140 - Set bed target temp. S<temp>
  * M145 - Set heatup values for materials on the LCD. H<hotend> B<bed> F<fan speed> for S<material> (0=PLA, 1=ABS)
  * M149 - Set temperature units. (Requires TEMPERATURE_UNITS_SUPPORT)
- * M150 - Set Status LED Color as R<red> U<green> B<blue>. Values 0-255. (Requires BLINKM, RGB_LED, RGBW_LED, or PCA9632)
+ * M150 - Set Status LED Color as R<red> U<green> B<blue> P<bright>. Values 0-255. (Requires BLINKM, RGB_LED, RGBW_LED, NEOPIXEL_LED, or PCA9632).
  * M155 - Auto-report temperatures with interval of S<seconds>. (Requires AUTO_REPORT_TEMPERATURES)
  * M163 - Set a single proportion for a mixing extruder. (Requires MIXING_EXTRUDER)
  * M164 - Save the mix as a virtual extruder. (Requires MIXING_EXTRUDER and MIXING_VIRTUAL_TOOLS)
@@ -283,7 +283,7 @@
   #include "Max7219_Debug_LEDs.h"
 #endif
 
-#if ENABLED(NEOPIXEL_RGBW_LED)
+#if ENABLED(NEOPIXEL_LED)
   #include <Adafruit_NeoPixel.h>
 #endif
 
@@ -347,6 +347,20 @@
                            && ubl.z_values[2][0] == ubl.z_values[2][1] && ubl.z_values[2][1] == ubl.z_values[2][2] \
                            && ubl.z_values[0][0] == 0 && ubl.z_values[1][0] == 0 && ubl.z_values[2][0] == 0 )  \
                            || isnan(ubl.z_values[0][0]))
+#endif
+
+#if ENABLED(NEOPIXEL_LED) 
+  #if NEOPIXEL_TYPE == NEO_RGB || NEOPIXEL_TYPE == NEO_RBG || NEOPIXEL_TYPE == NEO_GRB || NEOPIXEL_TYPE == NEO_GBR || NEOPIXEL_TYPE == NEO_BRG || NEOPIXEL_TYPE == NEO_BGR
+    #define NEO_WHITE 255, 255, 255
+  #else
+    #define NEO_WHITE 0, 0, 0, 255
+  #endif
+#endif
+
+#if ENABLED(RGB_LED) || ENABLED(BLINKM) || ENABLED(PCA9632)
+  #define LED_WHITE 255, 255, 255
+#elif ENABLED(RGBW_LED)
+  #define LED_WHITE 0, 0, 0, 255
 #endif
 
 bool Running = true;
@@ -978,9 +992,9 @@ void servo_init() {
 
 #if HAS_COLOR_LEDS
 
-  #if ENABLED(NEOPIXEL_RGBW_LED)
+  #if ENABLED(NEOPIXEL_LED)
 
-    Adafruit_NeoPixel pixels(NEOPIXEL_PIXELS, NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800);
+    Adafruit_NeoPixel pixels(NEOPIXEL_PIXELS, NEOPIXEL_PIN, NEOPIXEL_TYPE + NEO_KHZ800);
 
     void set_neopixel_color(const uint32_t color) {
       for (uint16_t i = 0; i < pixels.numPixels(); ++i)
@@ -989,7 +1003,7 @@ void servo_init() {
     }
 
     void setup_neopixel() {
-      pixels.setBrightness(255); // 0 - 255 range
+      pixels.setBrightness(NEOPIXEL_BRIGHTNESS); // 0 - 255 range
       pixels.begin();
       pixels.show(); // initialize to all off
 
@@ -1002,26 +1016,28 @@ void servo_init() {
         set_neopixel_color(pixels.Color(0, 0, 255, 0));  // blue
         delay(2000);
       #endif
-      set_neopixel_color(pixels.Color(0, 0, 0, 255));    // white
+      set_neopixel_color(pixels.Color(NEO_WHITE));       // white
     }
 
-  #endif // NEOPIXEL_RGBW_LED
+  #endif // NEOPIXEL_LED
 
   void set_led_color(
     const uint8_t r, const uint8_t g, const uint8_t b
-      #if ENABLED(RGBW_LED) || ENABLED(NEOPIXEL_RGBW_LED)
+      #if ENABLED(RGBW_LED) || ENABLED(NEOPIXEL_LED)
         , const uint8_t w = 0
-        #if ENABLED(NEOPIXEL_RGBW_LED)
+        #if ENABLED(NEOPIXEL_LED)
+          , const uint8_t p = NEOPIXEL_BRIGHTNESS
           , bool isSequence = false
         #endif
       #endif
   ) {
 
-    #if ENABLED(NEOPIXEL_RGBW_LED)
+    #if ENABLED(NEOPIXEL_LED)
 
       const uint32_t color = pixels.Color(r, g, b, w);
       static uint16_t nextLed = 0;
 
+      pixels.setBrightness(p);
       if (!isSequence)
         set_neopixel_color(color);
       else {
@@ -1098,9 +1114,10 @@ inline void get_serial_commands() {
   /**
    * Loop while serial characters are incoming and the queue is not full
    */
-  while (commands_in_queue < BUFSIZE && MYSERIAL.available() > 0) {
+  int c;
+  while (commands_in_queue < BUFSIZE && (c = MYSERIAL.read()) >= 0) {
 
-    char serial_char = MYSERIAL.read();
+    char serial_char = c;
 
     /**
      * If the character ends the line
@@ -1200,9 +1217,9 @@ inline void get_serial_commands() {
       // The command will be injected when EOL is reached
     }
     else if (serial_char == '\\') {  // Handle escapes
-      if (MYSERIAL.available() > 0) {
+      if ((c = MYSERIAL.read()) >= 0) {
         // if we have one more character, copy it over
-        serial_char = MYSERIAL.read();
+        serial_char = c;
         if (!serial_comment_mode) serial_line_buffer[serial_count++] = serial_char;
       }
       // otherwise do nothing
@@ -1822,7 +1839,7 @@ static void clean_up_after_endstop_or_probe_move() {
 
 #endif // HAS_BED_PROBE
 
-#if HAS_PROBING_PROCEDURE || HOTENDS > 1 || ENABLED(Z_PROBE_ALLEN_KEY) || ENABLED(Z_PROBE_SLED) || ENABLED(NOZZLE_CLEAN_FEATURE) || ENABLED(NOZZLE_PARK_FEATURE) || ENABLED(DELTA_AUTO_CALIBRATION)
+#if HAS_AXIS_UNHOMED_ERR
 
   bool axis_unhomed_error(const bool x/*=true*/, const bool y/*=true*/, const bool z/*=true*/) {
     #if ENABLED(HOME_AFTER_DEACTIVATE)
@@ -1850,7 +1867,7 @@ static void clean_up_after_endstop_or_probe_move() {
     return false;
   }
 
-#endif
+#endif // HAS_AXIS_UNHOMED_ERR
 
 #if ENABLED(Z_PROBE_SLED)
 
@@ -2053,7 +2070,7 @@ static void clean_up_after_endstop_or_probe_move() {
     #endif
   }
 
-#endif
+#endif // Z_PROBE_ALLEN_KEY
 
 #if ENABLED(PROBING_FANS_OFF)
 
@@ -3193,6 +3210,8 @@ static void homeaxis(const AxisEnum axis) {
     // The current position will be the destination for E and Z moves
     set_destination_to_current();
 
+    stepper.synchronize(); // Wait for all moves to finish
+
     if (retracting) {
       // Remember the Z height since G-code may include its own Z-hop
       // For best results turn off Z hop if G-code already includes it
@@ -3381,6 +3400,10 @@ inline void gcode_G0_G1(
     bool fast_move=false
   #endif
 ) {
+  #if ENABLED(NO_MOTION_BEFORE_HOMING)
+    if (axis_unhomed_error()) return;
+  #endif
+
   if (IsRunning()) {
     gcode_get_destination(); // For X Y Z E F
 
@@ -3436,6 +3459,10 @@ inline void gcode_G0_G1(
 #if ENABLED(ARC_SUPPORT)
 
   inline void gcode_G2_G3(bool clockwise) {
+    #if ENABLED(NO_MOTION_BEFORE_HOMING)
+      if (axis_unhomed_error()) return;
+    #endif
+
     if (IsRunning()) {
 
       #if ENABLED(SF_ARC_FIX)
@@ -3533,7 +3560,19 @@ inline void gcode_G4() {
    * G5: Cubic B-spline
    */
   inline void gcode_G5() {
+    #if ENABLED(NO_MOTION_BEFORE_HOMING)
+      if (axis_unhomed_error()) return;
+    #endif
+
     if (IsRunning()) {
+
+      #if ENABLED(CNC_WORKSPACE_PLANES)
+        if (workspace_plane != PLANE_XY) {
+          SERIAL_ERROR_START();
+          SERIAL_ERRORLNPGM(MSG_ERR_BAD_PLANE_MODE);
+          return;
+        }
+      #endif
 
       gcode_get_destination();
 
@@ -5337,13 +5376,15 @@ void home_all_axes() { gcode_G28(true); }
      *
      *   Fn  Force to run at least n iterations and takes the best result
      *
+     *   A1  Auto tune calibartion factors (set in Configuration.h)
+     *
      *   Vn  Verbose level:
      *
      *      V0  Dry-run mode. Report settings and probe results. No calibration.
      *      V1  Report settings
      *      V2  Report settings and probe results
      *
-     *   E   Engage the probe for each point
+     *   E1  Engage the probe for each point
      */
 
     void print_signed_float(const char * const prefix, const float &f) {
@@ -5354,7 +5395,7 @@ void home_all_axes() { gcode_G28(true); }
       SERIAL_PROTOCOL_F(f, 2);
     }
 
-    void print_G33_settings(const bool end_stops, const bool tower_angles){
+    void print_G33_settings(const bool end_stops, const bool tower_angles) {
       SERIAL_PROTOCOLPAIR(".Height:", DELTA_HEIGHT + home_offset[Z_AXIS]);
       if (end_stops) {
         print_signed_float(PSTR("  Ex"), endstop_adj[A_AXIS]);
@@ -5372,7 +5413,7 @@ void home_all_axes() { gcode_G28(true); }
       }
     }
 
-    void print_G33_results(const float z_at_pt[13], const bool tower_points, const bool opposite_points){
+    void print_G33_results(const float z_at_pt[13], const bool tower_points, const bool opposite_points) {
       SERIAL_PROTOCOLPGM(".    ");
       print_signed_float(PSTR("c"), z_at_pt[0]);
       if (tower_points) {
@@ -5408,7 +5449,7 @@ void home_all_axes() { gcode_G28(true); }
       #endif
     }
 
-    void probe_G33_points(float z_at_pt[13], const int8_t probe_points, const bool towers_set, const bool stow_after_each){
+    void probe_G33_points(float z_at_pt[13], const int8_t probe_points, const bool towers_set, const bool stow_after_each) {
       const bool _0p_calibration      = probe_points == 0,
                  _1p_calibration      = probe_points == 1,
                  _4p_calibration      = probe_points == 2,
@@ -5454,7 +5495,7 @@ void home_all_axes() { gcode_G28(true); }
         if (!_1p_calibration) {  // probe the radius
           bool zig_zag = true;
           const uint8_t start = _4p_opposite_points ? 3 : 1,
-                         step = _4p_calibration ? 4 : _7p_half_circle ? 2 : 1;
+                        step = _4p_calibration ? 4 : _7p_half_circle ? 2 : 1;
           for (uint8_t axis = start; axis < 13; axis += step) {
             const float zigadd = (zig_zag ? 0.5 : 0.0),
                         offset_circles = _7p_quadruple_circle ? zigadd + 1.0 :
@@ -5477,16 +5518,16 @@ void home_all_axes() { gcode_G28(true); }
       }
     }
     
-    void G33_auto_tune(){  //(see: https://github.com/LVD-AC/Marlin-AC/tree/1.1.x-AC/documentation)
+    void G33_auto_tune() {  //(see: https://github.com/LVD-AC/Marlin-AC/tree/1.1.x-AC/documentation)
       float z_at_pt[13] = { 0.0 }, z_at_pt_base[13] = { 0.0 }, z_temp,
-            h_fac = 0.0, r_fac = 0.0, a_fac = 0.0;
+            h_fac = 0.0, r_fac = 0.0, a_fac = 0.0, norm = 0.8;
 
       #define ZP(N,I) ((N) * z_at_pt[I])
       #define Z06(I)  ZP(6, I)
       #define Z03(I)  ZP(3, I)
       #define Z02(I)  ZP(2, I)
       #define Z01(I)  ZP(1, I)
-      #define Z34(I) ZP(4/3, I)
+      #define Z32(I)  ZP(3/2, I)
 
       SERIAL_PROTOCOLPGM("Setting baseline for AUTO TUNE");
       SERIAL_EOL();
@@ -5507,18 +5548,18 @@ void home_all_axes() { gcode_G28(true); }
         endstop_adj[axis] += 1.0;
         switch (axis) {
           case A_AXIS :
-          h_fac += 4.0 / (Z02(0) +Z01(1)                         +Z34(11) +Z34(3)); //displacement by X-tower end-stop
+          h_fac += 4.0 / (Z03(0) +Z01(1)                         +Z32(11) +Z32(3)); //displacement by X-tower end-stop
           break;
           case B_AXIS :
-          h_fac += 4.0 / (Z02(0)         +Z01(5)         +Z34(7)          +Z34(3)); //displacement by X-tower end-stop
+          h_fac += 4.0 / (Z03(0)         +Z01(5)         +Z32(7)          +Z32(3)); //displacement by Y-tower end-stop
           break;
           case C_AXIS :
-          h_fac += 4.0 / (Z02(0)                 +Z01(9) +Z34(7) +Z34(11)        ); //displacement by X-tower end-stop
+          h_fac += 4.0 / (Z03(0)                 +Z01(9) +Z32(7) +Z32(11)        ); //displacement by Z-tower end-stop
           break;
         }
       }
       h_fac /= 3.0;
-      h_fac *= 0.75; // normalize to 1.02 for Kossel mini
+      h_fac *= norm; // normalize to 1.02 for Kossel mini
 
       for (int8_t zig_zag = -1; zig_zag < 2; zig_zag += 2) {
         delta_radius += 1.0 * zig_zag;
@@ -5537,7 +5578,7 @@ void home_all_axes() { gcode_G28(true); }
         r_fac -= zig_zag * 6.0 / (Z03(1) +Z03(5) +Z03(9) +Z03(7) +Z03(11) +Z03(3)); //displacement by delta radius          
       }
       r_fac /= 2.0;
-      r_fac *= 2.35; // normalize to 2.25 for Kossel mini
+      r_fac *= 3*norm; // normalize to 2.25 for Kossel mini
 
       LOOP_XYZ(axis) {
         delta_tower_angle_trim[axis] += 1.0;
@@ -5576,7 +5617,7 @@ void home_all_axes() { gcode_G28(true); }
         }
       }
       a_fac /= 3.0;
-      a_fac *= 0.8; // normalize to 0.83 for Kossel mini
+      a_fac *= norm; // normalize to 0.83 for Kossel mini
 
       if (!home_delta())
         return;
@@ -5633,7 +5674,6 @@ void home_all_axes() { gcode_G28(true); }
       int8_t iterations = 0;
       float test_precision,
             zero_std_dev = (verbose_level ? 999.0 : 0.0), // 0.0 in dry-run mode : forced end
-            zero_std_dev_old = zero_std_dev,
             zero_std_dev_min = zero_std_dev,
             e_old[ABC] = {
               endstop_adj[A_AXIS],
@@ -5708,7 +5748,7 @@ void home_all_axes() { gcode_G28(true); }
 
         float z_at_pt[13] = { 0.0 };
 
-        test_precision = zero_std_dev_old != 999.0 ? (zero_std_dev + zero_std_dev_old) / 2 : zero_std_dev;
+        test_precision = zero_std_dev;
         iterations++;
 
         // Probe the points
@@ -5728,7 +5768,6 @@ void home_all_axes() { gcode_G28(true); }
             S2 += sq(z_at_pt[axis]);
             N++;
           }
-        zero_std_dev_old = zero_std_dev;
         zero_std_dev = round(SQRT(S2 / N) * 1000.0) / 1000.0 + 0.00001;
 
         // Solve matrices
@@ -5743,7 +5782,7 @@ void home_all_axes() { gcode_G28(true); }
 
           float e_delta[ABC] = { 0.0 }, r_delta = 0.0, t_delta[ABC] = { 0.0 };
           float r_diff = delta_radius - delta_calibration_radius,
-                h_factor = 1.00 + r_diff * 0.002,                            //1.02 for r_diff = 20mm
+                h_factor = 1.00 + r_diff * 0.001,                            //1.02 for r_diff = 20mm
                 r_factor = -(1.75 + 0.005 * r_diff + 0.001 * sq(r_diff)),    //2.25 for r_diff = 20mm
                 a_factor = 66.66 / delta_calibration_radius;                 //0.83 for cal_rd = 80mm
           #ifdef H_FACTOR
@@ -5761,9 +5800,9 @@ void home_all_axes() { gcode_G28(true); }
           #define Z4(I) ZP(4, I)
           #define Z2(I) ZP(2, I)
           #define Z1(I) ZP(1, I)
-          h_factor /= (iterations == 1 ? 12.0 : 6.00); //slow down on 1st iteration
-          r_factor /= (iterations == 1 ? 12.0 : 6.00);
-          a_factor /= (iterations == 1 ? 12.0 : 2.00);
+          h_factor /= 6.00;
+          r_factor /= 6.00;
+          a_factor /= (iterations == 1 ? 16.0 : 2.00); //slow down on 1st iteration
 
           #if ENABLED(PROBE_MANUALLY)
             test_precision = 0.00; // forced end
@@ -5804,9 +5843,9 @@ void home_all_axes() { gcode_G28(true); }
                 t_delta[A_AXIS] = (       - Z2(5) + Z2(9)         - Z2(11) + Z2(3)) * a_factor;
                 t_delta[B_AXIS] = ( Z2(1)         - Z2(9) + Z2(7)          - Z2(3)) * a_factor;
                 t_delta[C_AXIS] = (-Z2(1) + Z2(5)         - Z2(7) + Z2(11)        ) * a_factor;
-                e_delta[A_AXIS] += (t_delta[B_AXIS] - t_delta[C_AXIS])/4.5;
-                e_delta[B_AXIS] += (t_delta[C_AXIS] - t_delta[A_AXIS])/4.5;
-                e_delta[C_AXIS] += (t_delta[A_AXIS] - t_delta[B_AXIS])/4.5;
+                e_delta[A_AXIS] += (t_delta[B_AXIS] - t_delta[C_AXIS]) / 4.5;
+                e_delta[B_AXIS] += (t_delta[C_AXIS] - t_delta[A_AXIS]) / 4.5;
+                e_delta[C_AXIS] += (t_delta[A_AXIS] - t_delta[B_AXIS]) / 4.5;
               }
               break;
           }
@@ -6011,6 +6050,10 @@ void home_all_axes() { gcode_G28(true); }
    * G42: Move X & Y axes to mesh coordinates (I & J)
    */
   inline void gcode_G42() {
+    #if ENABLED(NO_MOTION_BEFORE_HOMING)
+      if (axis_unhomed_error()) return;
+    #endif
+
     if (IsRunning()) {
       const bool hasI = parser.seenval('I');
       const int8_t ix = hasI ? parser.value_int() : 0;
@@ -6501,6 +6544,8 @@ inline void gcode_M17() {
     #if HAS_BUZZER
       filament_change_beep(max_beep_count, true);
     #endif
+
+    set_destination_to_current();
 
     if (load_length != 0) {
       #if ENABLED(ULTIPANEL)
@@ -7719,9 +7764,13 @@ inline void gcode_M109() {
         if (blue != old_blue) {
           old_blue = blue;
           set_led_color(255, 0, blue
-            #if ENABLED(NEOPIXEL_RGBW_LED)
-              , 0, true
+          #if ENABLED(NEOPIXEL_LED)
+            , 0
+            , pixels.getBrightness()
+            #if ENABLED(NEOPIXEL_IS_SEQUENTIAL)
+              , true
             #endif
+          #endif
           );
         }
       }
@@ -7758,10 +7807,11 @@ inline void gcode_M109() {
   if (wait_for_heatup) {
     LCD_MESSAGEPGM(MSG_HEATING_COMPLETE);
     #if ENABLED(PRINTER_EVENT_LEDS)
-      #if ENABLED(RGBW_LED) || ENABLED(NEOPIXEL_RGBW_LED)
-        set_led_color(0, 0, 0, 255);  // Turn on the WHITE LED
-      #else
-        set_led_color(255, 255, 255); // Set LEDs All On
+      #if ENABLED(RGB_LED) || ENABLED(BLINKM) || ENABLED(PCA9632) || ENABLED(RGBW_LED)
+        set_led_color(LED_WHITE);
+      #endif
+      #if ENABLED(NEOPIXEL_LED)
+        set_neopixel_color(pixels.Color(NEO_WHITE));
       #endif
     #endif
   }
@@ -7859,8 +7909,11 @@ inline void gcode_M109() {
           if (red != old_red) {
             old_red = red;
             set_led_color(red, 0, 255
-              #if ENABLED(NEOPIXEL_RGBW_LED)
-                , 0, true
+              #if ENABLED(NEOPIXEL_LED)
+                , 0, pixels.getBrightness()
+                #if ENABLED(NEOPIXEL_IS_SEQUENTIAL)
+                  , true
+                #endif
               #endif
             );
           }
@@ -7914,16 +7967,17 @@ inline void gcode_M110() {
  * M111: Set the debug level
  */
 inline void gcode_M111() {
-  marlin_debug_flags = parser.byteval('S', (uint8_t)DEBUG_NONE);
+  if (parser.seen('S')) marlin_debug_flags = parser.byteval('S');
 
-  const static char str_debug_1[] PROGMEM = MSG_DEBUG_ECHO;
-  const static char str_debug_2[] PROGMEM = MSG_DEBUG_INFO;
-  const static char str_debug_4[] PROGMEM = MSG_DEBUG_ERRORS;
-  const static char str_debug_8[] PROGMEM = MSG_DEBUG_DRYRUN;
-  const static char str_debug_16[] PROGMEM = MSG_DEBUG_COMMUNICATION;
-  #if ENABLED(DEBUG_LEVELING_FEATURE)
-    const static char str_debug_32[] PROGMEM = MSG_DEBUG_LEVELING;
-  #endif
+  const static char str_debug_1[] PROGMEM = MSG_DEBUG_ECHO,
+                    str_debug_2[] PROGMEM = MSG_DEBUG_INFO,
+                    str_debug_4[] PROGMEM = MSG_DEBUG_ERRORS,
+                    str_debug_8[] PROGMEM = MSG_DEBUG_DRYRUN,
+                    str_debug_16[] PROGMEM = MSG_DEBUG_COMMUNICATION
+                    #if ENABLED(DEBUG_LEVELING_FEATURE)
+                      , str_debug_32[] PROGMEM = MSG_DEBUG_LEVELING
+                    #endif
+                    ;
 
   const static char* const debug_strings[] PROGMEM = {
     str_debug_1, str_debug_2, str_debug_4, str_debug_8, str_debug_16
@@ -8506,8 +8560,10 @@ inline void gcode_M121() { endstops.enable_globally(false); }
 
   /**
    * M150: Set Status LED Color - Use R-U-B-W for R-G-B-W
+   *       and Brightness       - Use P (for NEOPIXEL only)
    *
    * Always sets all 3 or 4 components. If a component is left out, set to 0.
+   *                                    If brightness is left out, no value changed
    *
    * Examples:
    *
@@ -8516,15 +8572,19 @@ inline void gcode_M121() { endstops.enable_globally(false); }
    *   M150            ; Turn LED off
    *   M150 R U B      ; Turn LED white
    *   M150 W          ; Turn LED white using a white LED
-   *
+   *   M150 P127       ; Set LED 50% brightness
+   *   M150 P          ; Set LED full brightness
    */
   inline void gcode_M150() {
     set_led_color(
       parser.seen('R') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
       parser.seen('U') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
       parser.seen('B') ? (parser.has_value() ? parser.value_byte() : 255) : 0
-      #if ENABLED(RGBW_LED) || ENABLED(NEOPIXEL_RGBW_LED)
+      #if ENABLED(RGBW_LED) || ENABLED(NEOPIXEL_LED)
         , parser.seen('W') ? (parser.has_value() ? parser.value_byte() : 255) : 0
+        #if ENABLED(NEOPIXEL_LED)
+          , parser.seen('P') ? (parser.has_value() ? parser.value_byte() : 255) : pixels.getBrightness()
+        #endif
       #endif
     );
   }
@@ -8685,7 +8745,7 @@ inline void gcode_M205() {
    *    B = delta calibration radius
    *    X = Alpha (Tower 1) angle trim
    *    Y = Beta (Tower 2) angle trim
-   *    Z = Gamma (Tower 3) angle trim
+   *    Z = Rotate A and B by this angle
    */
   inline void gcode_M665() {
     if (parser.seen('H')) {
@@ -8712,7 +8772,7 @@ inline void gcode_M205() {
     #endif
     LOOP_XYZ(i) {
       if (parser.seen(axis_codes[i])) {
-        if (parser.value_linear_units() * Z_HOME_DIR <= 0) 
+        if (parser.value_linear_units() * Z_HOME_DIR <= 0)
           endstop_adj[i] = parser.value_linear_units();
         #if ENABLED(DEBUG_LEVELING_FEATURE)
           if (DEBUGGING(LEVELING)) {
@@ -10251,15 +10311,14 @@ inline void gcode_M907() {
   #ifndef INVERT_CASE_LIGHT
     #define INVERT_CASE_LIGHT false
   #endif
-  int case_light_brightness;  // LCD routine wants INT
+  uint8_t case_light_brightness;  // LCD routine wants INT
   bool case_light_on;
 
   void update_case_light() {
     pinMode(CASE_LIGHT_PIN, OUTPUT); // digitalWrite doesn't set the port mode
-    uint8_t case_light_bright = (uint8_t)case_light_brightness;
     if (case_light_on) {
       if (USEABLE_HARDWARE_PWM(CASE_LIGHT_PIN)) {
-        analogWrite(CASE_LIGHT_PIN, INVERT_CASE_LIGHT ? 255 - case_light_brightness : case_light_brightness );
+        analogWrite(CASE_LIGHT_PIN, INVERT_CASE_LIGHT ? 255 - case_light_brightness : case_light_brightness);
       }
       else WRITE(CASE_LIGHT_PIN, INVERT_CASE_LIGHT ? LOW : HIGH);
     }
@@ -10293,7 +10352,7 @@ inline void gcode_M355() {
     }
     else {
       if (!USEABLE_HARDWARE_PWM(CASE_LIGHT_PIN)) SERIAL_ECHOLN("Case light: on");
-      else SERIAL_ECHOLNPAIR("Case light: ", case_light_brightness);
+      else SERIAL_ECHOLNPAIR("Case light: ", (int)case_light_brightness);
     }
 
   #else
@@ -12600,7 +12659,7 @@ void set_current_from_steppers_for_axis(const AxisEnum axis) {
           break;
       }
     }
-    return false;
+    return prepare_move_to_destination_cartesian();
   }
 
 #endif // DUAL_X_CARRIAGE
@@ -12642,7 +12701,7 @@ void prepare_move_to_destination() {
     #elif IS_KINEMATIC
       prepare_kinematic_move_to(destination)
     #elif ENABLED(DUAL_X_CARRIAGE)
-      prepare_move_to_destination_dualx() || prepare_move_to_destination_cartesian()
+      prepare_move_to_destination_dualx()
     #else
       prepare_move_to_destination_cartesian()
     #endif
@@ -12754,7 +12813,7 @@ void prepare_move_to_destination() {
     millis_t next_idle_ms = millis() + 200UL;
 
     #if N_ARC_CORRECTION > 1
-      int8_t count = N_ARC_CORRECTION;
+      int8_t arc_recalc_count = N_ARC_CORRECTION;
     #endif
 
     for (uint16_t i = 1; i < segments; i++) { // Iterate (segments-1) times
@@ -12766,7 +12825,7 @@ void prepare_move_to_destination() {
       }
 
       #if N_ARC_CORRECTION > 1
-        if (--count) {
+        if (--arc_recalc_count) {
           // Apply vector rotation matrix to previous r_P / 1
           const float r_new_Y = r_P * sin_T + r_Q * cos_T;
           r_P = r_P * cos_T - r_Q * sin_T;
@@ -12776,7 +12835,7 @@ void prepare_move_to_destination() {
       #endif
       {
         #if N_ARC_CORRECTION > 1
-          count = N_ARC_CORRECTION;
+          arc_recalc_count = N_ARC_CORRECTION;
         #endif
 
         // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments.
@@ -12806,8 +12865,9 @@ void prepare_move_to_destination() {
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
     set_current_to_destination();
-  }
-#endif
+  } // plan_arc
+
+#endif // ARC_SUPPORT
 
 #if ENABLED(BEZIER_CURVE_SUPPORT)
 
@@ -13170,9 +13230,6 @@ void disable_all_steppers() {
       #endif
       #if ENABLED(E4_IS_TMC2130)
         automatic_current_control(stepperE4, "E4");
-      #endif
-      #if ENABLED(E4_IS_TMC2130)
-        automatic_current_control(stepperE4);
       #endif
     }
   }
@@ -13623,7 +13680,7 @@ void setup() {
     OUT_WRITE(STAT_LED_BLUE_PIN, LOW); // turn it off
   #endif
 
-  #if ENABLED(NEOPIXEL_RGBW_LED)
+  #if ENABLED(NEOPIXEL_LED)
     SET_OUTPUT(NEOPIXEL_PIN);
     setup_neopixel();
   #endif
@@ -13714,6 +13771,12 @@ void setup() {
       pe_deactivate_magnet(1);
     #endif
   #endif
+  #if ENABLED(MKS_12864OLED)
+    SET_OUTPUT(LCD_PINS_DC);
+    OUT_WRITE(LCD_PINS_RS, LOW);
+    delay(1000);
+    WRITE(LCD_PINS_RS, HIGH);
+  #endif
 }
 
 /**
@@ -13743,6 +13806,15 @@ void loop() {
           // M29 closes the file
           card.closefile();
           SERIAL_PROTOCOLLNPGM(MSG_FILE_SAVED);
+
+          #if ENABLED(SERIAL_STATS_DROPPED_RX)
+            SERIAL_ECHOLNPAIR("Dropped bytes: ", customizedSerial.dropped());
+          #endif
+
+          #if ENABLED(SERIAL_STATS_MAX_RX_QUEUED)
+            SERIAL_ECHOLNPAIR("Max RX Queue Size: ", customizedSerial.rxMaxEnqueued());
+          #endif
+
           ok_to_send();
         }
         else {

@@ -36,13 +36,13 @@
  *
  */
 
-#define EEPROM_VERSION "V40"
+#define EEPROM_VERSION "V41"
 
 // Change EEPROM version if these are changed:
 #define EEPROM_OFFSET 100
 
 /**
- * V39 EEPROM Layout:
+ * V41 EEPROM Layout:
  *
  *  100  Version                                    (char x4)
  *  104  EEPROM CRC16                               (uint16_t)
