@@ -2240,7 +2240,7 @@ static void clean_up_after_endstop_or_probe_move() {
    *   - Raise to the BETWEEN height
    * - Return the probed Z position
    */
-  float probe_pt(const float &x, const float &y, const bool stow/*=true*/, const int verbose_level/*=1*/, bool printable = true) {
+  float probe_pt(const float &lx, const float &ly, const bool stow/*=true*/, const int verbose_level/*=1*/, bool printable = true) {
     #if ENABLED(DEBUG_LEVELING_FEATURE)
       if (DEBUGGING(LEVELING)) {
         SERIAL_ECHOPAIR(">>> probe_pt(", x);
@@ -2251,10 +2251,10 @@ static void clean_up_after_endstop_or_probe_move() {
       }
     #endif
     if (printable)
-      if (!position_is_reachable_by_probe_xy(x, y)) return NAN;
+      if (!position_is_reachable_by_probe_xy(lx, ly)) return NAN;
     else
-      if (!position_is_reachable_xy(x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER)) return NAN;
- 
+      if (!position_is_reachable_xy(lx - X_PROBE_OFFSET_FROM_EXTRUDER, ly - Y_PROBE_OFFSET_FROM_EXTRUDER)) return NAN;
+
     const float old_feedrate_mm_s = feedrate_mm_s;
 
     #if ENABLED(DELTA)
@@ -2268,7 +2268,7 @@ static void clean_up_after_endstop_or_probe_move() {
     feedrate_mm_s = XY_PROBE_FEEDRATE_MM_S;
 
     // Move the probe to the given XY
-    do_blocking_move_to_xy(x - (X_PROBE_OFFSET_FROM_EXTRUDER), y - (Y_PROBE_OFFSET_FROM_EXTRUDER));
+    do_blocking_move_to_xy(lx - (X_PROBE_OFFSET_FROM_EXTRUDER), ly - (Y_PROBE_OFFSET_FROM_EXTRUDER));
 
     if (DEPLOY_PROBE()) return NAN;
 
@@ -2281,9 +2281,9 @@ static void clean_up_after_endstop_or_probe_move() {
 
     if (verbose_level > 2) {
       SERIAL_PROTOCOLPGM("Bed X: ");
-      SERIAL_PROTOCOL_F(x, 3);
+      SERIAL_PROTOCOL_F(lx, 3);
       SERIAL_PROTOCOLPGM(" Y: ");
-      SERIAL_PROTOCOL_F(y, 3);
+      SERIAL_PROTOCOL_F(ly, 3);
       SERIAL_PROTOCOLPGM(" Z: ");
       SERIAL_PROTOCOL_F(measured_z, 3);
       SERIAL_EOL;
@@ -5022,6 +5022,10 @@ void home_all_axes() { gcode_G28(true); }
 
   #endif // Z_PROBE_SLED
 
+#endif // HAS_BED_PROBE
+
+#if PROBE_SELECTED
+
   #if ENABLED(DELTA_AUTO_CALIBRATION)
     /**
      * G33 - Delta '1-4-7-point' Auto-Calibration
@@ -5050,7 +5054,9 @@ void home_all_axes() { gcode_G28(true); }
      *
      *   E   Engage the probe for each point
      */
-    inline void gcode_G33() {
+      extern float _man_probe_pt(const float &lx, const float &ly);
+      
+      inline void gcode_G33() {
 
       const int8_t probe_points = parser.seen('P') ? parser.value_int() : DELTA_CALIBRATION_DEFAULT_POINTS;
       if (!WITHIN(probe_points, 1, 7)) {
@@ -5070,9 +5076,9 @@ void home_all_axes() { gcode_G28(true); }
         return;
       }
 
-      const int8_t force_iterations = parser.seen('F') ? parser.value_int() : 1;
-      if (!WITHIN(force_iterations, 1, 30)) {
-        SERIAL_PROTOCOLLNPGM("?(F)orce iteration is implausible (1-30).");
+      const int8_t force_iterations = parser.seen('F') ? parser.value_int() : 0;
+      if (!WITHIN(force_iterations, 0, 30)) {
+        SERIAL_PROTOCOLLNPGM("?(F)orce iteration is implausible (0-30).");
         return;
       }
 
@@ -5107,7 +5113,7 @@ void home_all_axes() { gcode_G28(true); }
             alpha_old = delta_tower_angle_trim[A_AXIS],
             beta_old = delta_tower_angle_trim[B_AXIS];
 
-       if (!_1p_calibration) {  // test if the outer radius is reachable
+      if (!_1p_calibration) {  // test if the outer radius is reachable
         const float circles = (_7p_quadruple_circle ? 1.5 :
                                _7p_triple_circle    ? 1.0 :
                                _7p_double_circle    ? 0.5 : 0),
@@ -5120,7 +5126,6 @@ void home_all_axes() { gcode_G28(true); }
           }
         }
       }
-
       SERIAL_PROTOCOLLNPGM("G33 Auto Calibrate");
 
       stepper.synchronize();
@@ -5168,8 +5173,9 @@ void home_all_axes() { gcode_G28(true); }
         SERIAL_PROTOCOLPGM("  Tz:+0.00");
         SERIAL_EOL;
       }
-
-      home_offset[Z_AXIS] -= probe_pt(dx, dy, stow_after_each, 1, false); // 1st probe to set height
+      #if !ENABLED(PROBE_MANUALLY)
+        home_offset[Z_AXIS] -= probe_pt(dx, dy, stow_after_each, 1, false); // 1st probe to set height
+      #endif
 
       do {
 
@@ -5182,12 +5188,32 @@ void home_all_axes() { gcode_G28(true); }
         // Probe the points
 
         if (!_7p_half_circle && !_7p_triple_circle) { // probe the center
-          z_at_pt[0] += probe_pt(dx, dy, stow_after_each, 1, false);
+          #if !ENABLED(PROBE_MANUALLY)
+            z_at_pt[0] += probe_pt(dx, dy, stow_after_each, 1, false);
+          #else
+            _man_probe_pt(0, 0);
+            KEEPALIVE_STATE(PAUSED_FOR_USER);
+            wait_for_user = true;
+            while (wait_for_user) idle();
+            wait_for_user = false;
+            KEEPALIVE_STATE(IN_HANDLER);
+            z_at_pt[0] += current_position[Z_AXIS];
+          #endif
         }
         if (_7p_calibration) { // probe extra center points
           for (int8_t axis = _7p_multi_circle ? 11 : 9; axis > 0; axis -= _7p_multi_circle ? 2 : 4) {
             const float a = RADIANS(180 + 30 * axis), r = delta_calibration_radius * 0.1;
-            z_at_pt[0] += probe_pt(cos(a) * r + dx, sin(a) * r + dy, stow_after_each, 1, false);
+            #if !ENABLED(PROBE_MANUALLY)
+              z_at_pt[0] += probe_pt(cos(a) * r + dx, sin(a) * r + dy, stow_after_each, 1, false);
+            #else
+              _man_probe_pt(cos(a) * r, sin(a) * r);
+              KEEPALIVE_STATE(PAUSED_FOR_USER);
+              wait_for_user = true;
+              while (wait_for_user) idle();
+              wait_for_user = false;
+              KEEPALIVE_STATE(IN_HANDLER);
+              z_at_pt[0] += current_position[Z_AXIS];
+            #endif
           }
           z_at_pt[0] /= float(_7p_double_circle ? 7 : probe_points);
         }
@@ -5202,7 +5228,17 @@ void home_all_axes() { gcode_G28(true); }
             for (float circles = -offset_circles ; circles <= offset_circles; circles++) {
               const float a = RADIANS(180 + 30 * axis),
                           r = delta_calibration_radius * (1 + circles * (zig_zag ? 0.1 : -0.1));
-              z_at_pt[axis] += probe_pt(cos(a) * r + dx, sin(a) * r + dy, stow_after_each, 1, false);
+              #if !ENABLED(PROBE_MANUALLY)
+                z_at_pt[axis] += probe_pt(cos(a) * r + dx, sin(a) * r + dy, stow_after_each, 1, false);
+              #else
+                _man_probe_pt(cos(a) * r, sin(a) * r);
+                KEEPALIVE_STATE(PAUSED_FOR_USER);
+                wait_for_user = true;
+                while (wait_for_user) idle();
+                wait_for_user = false;
+                KEEPALIVE_STATE(IN_HANDLER);
+                z_at_pt[axis] += current_position[Z_AXIS];
+              #endif
             }
             zig_zag = !zig_zag;
             z_at_pt[axis] /= (2 * offset_circles + 1);
@@ -5255,10 +5291,14 @@ void home_all_axes() { gcode_G28(true); }
           #define Z0375(I) ZP(r_factor / 6.00, I)
           #define Z0444(I) ZP(a_factor * 4.0 / 9.0, I)
           #define Z0888(I) ZP(a_factor * 8.0 / 9.0, I)
-
+          
+          #if ENABLED(PROBE_MANUALLY)
+            test_precision = 0.00; // forced end
+          #endif
+          
           switch (probe_points) {
             case 1:
-              test_precision = 0.00;
+              test_precision = 0.00; // forced end
               LOOP_XYZ(i) e_delta[i] = Z1000(0);
               break;
 
@@ -5347,16 +5387,19 @@ void home_all_axes() { gcode_G28(true); }
             SERIAL_EOL;
           }
         }
-        if (test_precision != 0.0) {                                 // !forced end
+        if (verbose_level != 0) {                                 // !dry run
           if ((zero_std_dev >= test_precision || zero_std_dev <= calibration_precision) && iterations > force_iterations) {  // end iterations
             SERIAL_PROTOCOLPGM("Calibration OK");
             SERIAL_PROTOCOL_SP(36);
-            if (zero_std_dev >= test_precision)
-              SERIAL_PROTOCOLPGM("rolling back.");
-            else {
-              SERIAL_PROTOCOLPGM("std dev:");
-              SERIAL_PROTOCOL_F(zero_std_dev, 3);
-            }
+            #if !ENABLED(PROBE_MANUALLY)
+              if (zero_std_dev >= test_precision && !_1p_calibration)
+                SERIAL_PROTOCOLPGM("rolling back.");
+              else
+            #endif
+              {
+                SERIAL_PROTOCOLPGM("std dev:");
+                SERIAL_PROTOCOL_F(zero_std_dev, 3);
+              }
             SERIAL_EOL;
             LCD_MESSAGEPGM("Calibration OK"); // TODO: Make translatable string
           }
@@ -5399,22 +5442,12 @@ void home_all_axes() { gcode_G28(true); }
             serialprintPGM(save_message);
             SERIAL_EOL;
         }
-        else {                                                       // forced end
-          if (verbose_level == 0) {
-            SERIAL_PROTOCOLPGM("End DRY-RUN");
-            SERIAL_PROTOCOL_SP(39);
-            SERIAL_PROTOCOLPGM("std dev:");
-            SERIAL_PROTOCOL_F(zero_std_dev, 3);
-            SERIAL_EOL;
-          }
-          else {
-            SERIAL_PROTOCOLLNPGM("Calibration OK");
-            LCD_MESSAGEPGM("Calibration OK"); // TODO: Make translatable string
-            SERIAL_PROTOCOLPAIR(".Height:", DELTA_HEIGHT + home_offset[Z_AXIS]);
-            SERIAL_EOL;
-            serialprintPGM(save_message);
-            SERIAL_EOL;
-          }
+        else {                                                       // dry run
+          SERIAL_PROTOCOLPGM("End DRY-RUN");
+          SERIAL_PROTOCOL_SP(39);
+          SERIAL_PROTOCOLPGM("std dev:");
+          SERIAL_PROTOCOL_F(zero_std_dev, 3);
+          SERIAL_EOL;
         }
 
         endstops.enable(true);
@@ -5436,7 +5469,7 @@ void home_all_axes() { gcode_G28(true); }
 
   #endif // DELTA_AUTO_CALIBRATION
 
-#endif // HAS_BED_PROBE
+#endif // PROBE_SELECTED
 
 #if ENABLED(G38_PROBE_TARGET)
 
@@ -10278,6 +10311,10 @@ void process_next_command() {
 
         #endif // Z_PROBE_SLED
 
+      #endif // HAS_BED_PROBE
+
+      #if PROBE_SELECTED
+
         #if ENABLED(DELTA_AUTO_CALIBRATION)
 
           case 33: // G33: Delta Auto-Calibration
@@ -10286,7 +10323,7 @@ void process_next_command() {
 
         #endif // DELTA_AUTO_CALIBRATION
 
-      #endif // HAS_BED_PROBE
+      #endif // PROBE_SELECTED
 
       #if ENABLED(G38_PROBE_TARGET)
         case 38: // G38.2 & G38.3

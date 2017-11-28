@@ -686,6 +686,15 @@ void kill_screen(const char* lcd_msg) {
     else lcd_buzz(20, 440);
   }
 
+  inline void line_to_current_z() {
+    planner.buffer_line_kinematic(current_position, MMM_TO_MMS(manual_feedrate_mm_m[Z_AXIS]), active_extruder);
+  }
+
+  inline void line_to_z(const float &z) {
+    current_position[Z_AXIS] = z;
+    line_to_current_z();
+  }
+
   inline void line_to_current(AxisEnum axis) {
     planner.buffer_line_kinematic(current_position, MMM_TO_MMS(manual_feedrate_mm_m[axis]), active_extruder);
   }
@@ -2287,33 +2296,28 @@ void kill_screen(const char* lcd_msg) {
       lcd_goto_screen(_lcd_calibrate_homing);
     }
 
-    // Move directly to the tower position with uninterpolated moves
-    // If we used interpolated moves it would cause this to become re-entrant
-    void _goto_tower_pos(const float &a) {
+    void _man_probe_pt(const float &lx, const float &ly) {
       #if HAS_LEVELING
         reset_bed_level(); // After calibration bed-level data is no longer valid
       #endif
 
-      current_position[Z_AXIS] = max(Z_HOMING_HEIGHT, Z_CLEARANCE_BETWEEN_PROBES) + (DELTA_PRINTABLE_RADIUS) / 5;
-      line_to_current(Z_AXIS);
-
-      current_position[X_AXIS] = a < 0 ? LOGICAL_X_POSITION(X_HOME_POS) : cos(RADIANS(a)) * delta_calibration_radius;
-      current_position[Y_AXIS] = a < 0 ? LOGICAL_Y_POSITION(Y_HOME_POS) : sin(RADIANS(a)) * delta_calibration_radius;
-      line_to_current(Z_AXIS);
-
-      current_position[Z_AXIS] = 4.0;
-      line_to_current(Z_AXIS);
+      float z_dest = LOGICAL_Z_POSITION((Z_CLEARANCE_BETWEEN_PROBES) + (DELTA_PRINTABLE_RADIUS) / 5);
+      line_to_z(z_dest);
+      current_position[X_AXIS] = LOGICAL_X_POSITION(lx);
+      current_position[Y_AXIS] = LOGICAL_Y_POSITION(ly);
+      line_to_current_z();
+      z_dest = LOGICAL_Z_POSITION(Z_CLEARANCE_BETWEEN_PROBES);
+      line_to_z(z_dest);
 
       lcd_synchronize();
-
       move_menu_scale = 0.1;
       lcd_goto_screen(lcd_move_z);
     }
 
-    void _goto_tower_x() { _goto_tower_pos(210); }
-    void _goto_tower_y() { _goto_tower_pos(330); }
-    void _goto_tower_z() { _goto_tower_pos(90); }
-    void _goto_center()  { _goto_tower_pos(-1); }
+    void _goto_tower_x() { _man_probe_pt(cos(RADIANS(210)) * delta_calibration_radius, sin(RADIANS(210)) * delta_calibration_radius); }
+    void _goto_tower_y() { _man_probe_pt(cos(RADIANS(330)) * delta_calibration_radius, sin(RADIANS(330)) * delta_calibration_radius); }
+    void _goto_tower_z() { _man_probe_pt(cos(RADIANS( 90)) * delta_calibration_radius, sin(RADIANS( 90)) * delta_calibration_radius); }
+    void _goto_center()  { _man_probe_pt(0,0); }
 
     void lcd_delta_calibrate_menu() {
       START_MENU();
