@@ -15,7 +15,10 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
-1.1.6e-AC   <img src="pic/waiting.png">
+1.1.6f-AC   <img src="pic/waiting.png">
+- undo raw calibration
+
+1.1.6e-AC   <img src="pic/bugfix.png">
 - probe error handling
 - verbose level (0-3)
 - raw calibration
