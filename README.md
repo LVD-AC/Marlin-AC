@@ -8,12 +8,15 @@ This is the developers branch for Marlin-AC, always ahead of official Marlin. Fi
 
 ## Stable Release Branch
 
-This branch contains the latest tagged version of Marlin (currently 1.1.4 – July 2017) with all the additional AC developments to date.
+This branch contains the latest tagged version of Marlin (currently 1.1.5 – August 2017) with all the additional AC developments to date.
 
 
 ## Current Status: In Development
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
+
+1.1.5-AC
+- merge update to Marlin 1.1.5
 
 1.1.4-AC
 - merge update to Marlin 1.1.4
