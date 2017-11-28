@@ -297,9 +297,6 @@ extern float soft_endstop_min[XYZ], soft_endstop_max[XYZ];
 #endif
 
 #if ENABLED(DELTA)
-  #if ENABLED(DELTA_AUTO_CALIBRATION)
-    extern float raw_delta_height;
-  #endif
   extern float delta_height,
                delta_endstop_adj[ABC],
                delta_radius,

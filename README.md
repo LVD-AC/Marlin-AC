@@ -15,6 +15,10 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+1.1.6f-AC
+- undo raw calibration
+- delta_height follows z-offset
+
 1.1.6e-AC
 - probe error handling
 - verbose level (0-3)
@@ -31,16 +35,16 @@ Marlin-AC is in constant development to make it perform better and more stable b
 - universal number of calibration points
 - new probe grids
 
-1.1.6a-AC 
+1.1.6a-AC
 - prepare for 2.0.0 release
 
-1.1.6-AC 
+1.1.6-AC
 - merge update to Marlin 1.1.6
 
-1.1.5d-AC 
+1.1.5d-AC
 - A parameter : auto tune calibration factors
 
-1.1.5c-AC 
+1.1.5c-AC
 - documentation added
 - new matrices
 - move code to functions
@@ -48,7 +52,7 @@ Marlin-AC is in constant development to make it perform better and more stable b
 1.1.5b-AC
 - (abandoned)
 
-1.1.5a-AC 
+1.1.5a-AC
 - simplified matrix names
 - new angle least squares normalization
 - no normalizing on end-stops M666 and tower angles M665
