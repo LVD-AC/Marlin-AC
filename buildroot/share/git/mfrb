@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# mfrb
+#
+# Do "git rebase -i" against the "target" branch (RCBugFix or dev)
+#
+
+MFINFO=$(mfinfo) || exit
+IFS=' ' read -a INFO <<< "$MFINFO"
+
+case "$#" in
+  0 ) ;;
+  * ) echo "Usage: `basename $0`" 1>&2 ; exit 1 ;;
+esac
+
+git rebase -i ${INFO[3]}

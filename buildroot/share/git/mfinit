@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# mfinit
+#
+# Create the upstream remote for a forked repository
+#
+
+REPO=$(git remote get-url origin 2>/dev/null | sed -E 's/.*\/(.*)\.git/\1/')
+
+if [[ -z $REPO ]]; then
+  echo "`basename $0`: No 'origin' remote found." 1>&2 ; exit 1
+fi
+
+git remote add upstream "git@github.com:MarlinFirmware/$REPO.git"
+
+git fetch upstream
