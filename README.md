@@ -15,6 +15,13 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+G-force-6-AC
+- new convergence matrices
+- new auto tune
+- raw calibration + calibration reference
+- kinematic iterations
+- updated documentation
+
 1.1.6f-AC
 - undo raw calibration
 - delta_height follows z-offset
