@@ -5456,7 +5456,7 @@ void home_all_axes() { gcode_G28(true); }
                _7p_6_centre         = probe_points >= 5 && probe_points <= 7,
                _7p_9_centre         = probe_points >= 8;
 
-    LOOP_CAL_ALL(axis) z_at_pt[axis] = 0.0;
+    LOOP_CAL_ALL(rad) z_at_pt[rad] = 0.0;
 
     if (!_0p_calibration) {
 
@@ -5468,8 +5468,8 @@ void home_all_axes() { gcode_G28(true); }
       if (_7p_calibration) { // probe extra center points
         const float start  = _7p_9_centre ? _CA + _7P_STEP / 3.0 : _7p_6_centre ? _CA : __C,
                     steps  = _7p_9_centre ? _4P_STEP / 3.0 : _7p_6_centre ? _7P_STEP : _4P_STEP;
-        I_LOOP_CAL_PT(axis, start, steps) {
-          const float a = RADIANS(210 + (360 / NPP) *  (axis - 1)),
+        I_LOOP_CAL_PT(rad, start, steps) {
+          const float a = RADIANS(210 + (360 / NPP) *  (rad - 1)),
                       r = delta_calibration_radius * 0.1;
           z_at_pt[CEN] += calibration_probe(cos(a) * r, sin(a) * r, stow_after_each);
           if (isnan(z_at_pt[CEN])) return NAN;
@@ -5489,32 +5489,32 @@ void home_all_axes() { gcode_G28(true); }
                                _7p_no_intermediates ? _7P_STEP :        //  1r * 6 +  3c = 9
                                _4P_STEP;                                // .5r * 6 +  1c = 4
         bool zig_zag = true;
-        F_LOOP_CAL_PT(axis, start, _7p_9_centre ? steps * 3 : steps) {
+        F_LOOP_CAL_PT(rad, start, _7p_9_centre ? steps * 3 : steps) {
           const int8_t offset = _7p_9_centre ? 1 : 0;
           for (int8_t circle = -offset; circle <= offset; circle++) {
-            const float a = RADIANS(210 + (360 / NPP) *  (axis - 1)),
+            const float a = RADIANS(210 + (360 / NPP) *  (rad - 1)),
                         r = delta_calibration_radius * (1 + 0.1 * (zig_zag ? circle : - circle)),
-                        interpol = fmod(axis, 1);
+                        interpol = fmod(rad, 1);
             const float z_temp = calibration_probe(cos(a) * r, sin(a) * r, stow_after_each);
             if (isnan(z_temp)) return NAN;
             // split probe point to neighbouring calibration points
-            z_at_pt[uint8_t(round(axis - interpol + NPP - 1)) % NPP + 1] += z_temp * sq(cos(RADIANS(interpol * 90)));
-            z_at_pt[uint8_t(round(axis - interpol))           % NPP + 1] += z_temp * sq(sin(RADIANS(interpol * 90)));
+            z_at_pt[uint8_t(round(rad - interpol + NPP - 1)) % NPP + 1] += z_temp * sq(cos(RADIANS(interpol * 90)));
+            z_at_pt[uint8_t(round(rad - interpol))           % NPP + 1] += z_temp * sq(sin(RADIANS(interpol * 90)));
           }
           zig_zag = !zig_zag;
         }
         if (_7p_intermed_points)
-          LOOP_CAL_RAD(axis)
-            z_at_pt[axis] /= _7P_STEP / steps;
+          LOOP_CAL_RAD(rad)
+            z_at_pt[rad] /= _7P_STEP / steps;
       }
 
       float S1 = z_at_pt[CEN],
             S2 = sq(z_at_pt[CEN]);
       int16_t N = 1;
       if (!_1p_calibration) { // std dev from zero plane
-        LOOP_CAL_ACT(axis, _4p_calibration, _4p_opposite_points) {
-          S1 += z_at_pt[axis];
-          S2 += sq(z_at_pt[axis]);
+        LOOP_CAL_ACT(rad, _4p_calibration, _4p_opposite_points) {
+          S1 += z_at_pt[rad];
+          S2 += sq(z_at_pt[rad]);
           N++;
         }
         return round(SQRT(S2 / N) * 1000.0) / 1000.0 + 0.00001;
@@ -5530,6 +5530,54 @@ void home_all_axes() { gcode_G28(true); }
    *  - definition of the matrix scaling parameters h_fac_c ,r_fac_c and a_fac_c
    *  - formulae for approximative forward kinematics in the end-stop displacement matrix
    */
+  static void reverse_kinematics_probe_points(float z_at_pt[NPP + 1], float mm_at_pt_axis[NPP + 1][ABC]) {
+    float pos[XYZ] = { 0.0 };
+
+    pos[X_AXIS] = 0.0;
+    pos[Y_AXIS] = 0.0;
+    pos[Z_AXIS] = z_at_pt[0];
+    inverse_kinematics(pos);
+    LOOP_XYZ(axis) mm_at_pt_axis[0][axis] = delta[axis];           
+
+    LOOP_CAL_RAD(rad) {
+      const float a = RADIANS(210 + (360 / NPP) *  (rad - 1)),
+                  r = delta_calibration_radius;
+      pos[X_AXIS] = cos(a) * r;
+      pos[Y_AXIS] = sin(a) * r;
+      pos[Z_AXIS] = z_at_pt[rad];
+      inverse_kinematics(pos);
+      LOOP_XYZ(axis) mm_at_pt_axis[rad][axis] = delta[axis];           
+    }
+  }
+
+  static float forward_kinematics_probe_points(float mm_at_pt_axis[NPP + 1][ABC], float z_at_pt[NPP + 1]) {
+    const float cr = delta_calibration_radius / delta_radius;
+
+    #define ZP(N,I,A) ((1 / 3.0 + cr * (N) / 3.0 ) * mm_at_pt_axis[I][A]) // 4 divider to normalize to integers
+    #define Z00(I, A) ZP( 0, I, A)
+    #define Zp1(I, A) ZP(+1, I, A)
+    #define Zm1(I, A) ZP(-1, I, A)
+    #define Zp2(I, A) ZP(+2, I, A)
+    #define Zm2(I, A) ZP(-2, I, A)
+
+    z_at_pt[CEN] = Z00(CEN, A_AXIS) + Z00(CEN, B_AXIS) + Z00(CEN, C_AXIS);
+    z_at_pt[__A] = Zp2(__A, A_AXIS) + Zm1(__A, B_AXIS) + Zm1(__A, C_AXIS);
+    z_at_pt[__B] = Zm1(__B, A_AXIS) + Zp2(__B, B_AXIS) + Zm1(__B, C_AXIS);
+    z_at_pt[__C] = Zm1(__C, A_AXIS) + Zm1(__C, B_AXIS) + Zp2(__C, C_AXIS);
+    z_at_pt[_BC] = Zm2(_BC, A_AXIS) + Zp1(_BC, B_AXIS) + Zp1(_BC, C_AXIS);
+    z_at_pt[_CA] = Zp1(_CA, A_AXIS) + Zm2(_CA, B_AXIS) + Zp1(_CA, C_AXIS);
+    z_at_pt[_AB] = Zp1(_AB, A_AXIS) + Zp1(_AB, B_AXIS) + Zm2(_AB, C_AXIS);
+
+    float S1 = z_at_pt[CEN],
+          S2 = sq(z_at_pt[CEN]);
+    int16_t N = 1;
+    LOOP_CAL_RAD(rad) {
+      S1 += z_at_pt[rad];
+      S2 += sq(z_at_pt[rad]);
+      N++;
+    }
+    return round(SQRT(S2 / N) * 1000.0) / 1000.0 + 0.00001;
+  }
 
   static float auto_tune_h() {
     float h_fac_c = 0.0;
@@ -5542,55 +5590,57 @@ void home_all_axes() { gcode_G28(true); }
   }
 
   static float auto_tune_r() {
-    float r_fac_c = 0.0, pos[XYZ] = { 0.0 }, delta_old[ABC] = { 0.0 };
-    const float r_quot = delta_calibration_radius / delta_radius;
+    float r_fac_c = 0.0,
+          z_at_pt[NPP + 1] = { 0.0 },
+          old_mm_at_pt_axis[NPP + 1][ABC],
+          new_mm_at_pt_axis[NPP + 1][ABC];
 
-    pos[Y_AXIS] = delta_calibration_radius; // C-tower
-    inverse_kinematics(pos);
-    LOOP_XYZ(axis) delta_old[axis] = delta[axis];           
+    reverse_kinematics_probe_points(z_at_pt, old_mm_at_pt_axis);
     delta_radius += 1.0;
     recalc_delta_settings();
-    inverse_kinematics(pos);
-    r_fac_c = // approximative forward kinematics for C_tower
-        (delta[X_AXIS] - delta_old[X_AXIS]) * (1 / 3.0 - (r_quot) * 1 / 3.0) +
-        (delta[Y_AXIS] - delta_old[Y_AXIS]) * (1 / 3.0 - (r_quot) * 1 / 3.0) +
-        (delta[Z_AXIS] - delta_old[Z_AXIS]) * (1 / 3.0 + (r_quot) * 2 / 3.0);
+    reverse_kinematics_probe_points(z_at_pt, new_mm_at_pt_axis);
+    LOOP_XYZ(axis) {
+      new_mm_at_pt_axis[CEN][axis] -= old_mm_at_pt_axis[CEN][axis];
+      LOOP_CAL_RAD(rad) {
+        new_mm_at_pt_axis[rad][axis] -= old_mm_at_pt_axis[rad][axis];
+      }
+    }  
+    float dummy = forward_kinematics_probe_points(new_mm_at_pt_axis, z_at_pt);
     delta_radius -= 1.0;
     recalc_delta_settings();
 
-    pos[Y_AXIS] = 0.0; // - Center
-    inverse_kinematics(pos);
-    LOOP_XYZ(axis) delta_old[axis] = delta[axis];           
-    delta_radius += 1.0;
-    recalc_delta_settings();
-    inverse_kinematics(pos);
-    r_fac_c -= // approximative forward kinematics for Center
-        (delta[X_AXIS] - delta_old[X_AXIS]) * (1 / 3.0) +
-        (delta[Y_AXIS] - delta_old[Y_AXIS]) * (1 / 3.0) +
-        (delta[Z_AXIS] - delta_old[Z_AXIS]) * (1 / 3.0);
-    delta_radius -= 1.0;
-    recalc_delta_settings();
-
+    r_fac_c -= z_at_pt[CEN];
+    LOOP_CAL_RAD(rad) {
+      r_fac_c += z_at_pt[rad] / NPP;
+    }
     r_fac_c = 1.0 / r_fac_c / 3.0; // 1/(3*delta_Z)
     return r_fac_c;
   }
 
   static float auto_tune_a() {
-    float a_fac_c = 0.0, pos[XYZ] = { 0.0 }, delta_old[ABC] = { 0.0 };
-    const float r_quot = delta_calibration_radius / delta_radius;
+    float a_fac_c = 0.0,
+          z_at_pt[NPP + 1] = { 0.0 },
+          old_mm_at_pt_axis[NPP + 1][ABC],
+          new_mm_at_pt_axis[NPP + 1][ABC];
 
-    pos[Y_AXIS] = -delta_calibration_radius; // opposite C-tower
-    inverse_kinematics(pos);
-    LOOP_XYZ(axis) delta_old[axis] = delta[axis];            
-    delta_tower_angle_trim[X_AXIS] += 1.0;
-    recalc_delta_settings();
-    inverse_kinematics(pos);
-    a_fac_c = // approximative forward kinematics for opposite C-tower
-        (delta[X_AXIS] - delta_old[X_AXIS]) * (1 / 3.0 + (r_quot) * 1 / 3.0) +
-        (delta[Y_AXIS] - delta_old[Y_AXIS]) * (1 / 3.0 + (r_quot) * 1 / 3.0) +
-        (delta[Z_AXIS] - delta_old[Z_AXIS]) * (1 / 3.0 - (r_quot) * 2 / 3.0);
-    delta_tower_angle_trim[X_AXIS] -= 1.0;
-    recalc_delta_settings();
+    LOOP_XYZ(angle) {
+      reverse_kinematics_probe_points(z_at_pt, old_mm_at_pt_axis);
+      delta_tower_angle_trim[angle] += 1.0;
+      recalc_delta_settings();
+      reverse_kinematics_probe_points(z_at_pt, new_mm_at_pt_axis);
+      LOOP_XYZ(axis) {
+        new_mm_at_pt_axis[CEN][axis] -= old_mm_at_pt_axis[CEN][axis];
+        LOOP_CAL_RAD(rad) {
+          new_mm_at_pt_axis[rad][axis] -= old_mm_at_pt_axis[rad][axis];
+        }
+      }  
+      float dummy = forward_kinematics_probe_points(new_mm_at_pt_axis, z_at_pt);
+      delta_tower_angle_trim[angle] -= 1.0;
+      recalc_delta_settings();
+
+      a_fac_c -= z_at_pt[uint8_t((angle * _4P_STEP) - _7P_STEP + NPP) % NPP + 1] / 6;
+      a_fac_c += z_at_pt[uint8_t((angle * _4P_STEP) + 1 + _7P_STEP)] / 6;
+    }
 
     a_fac_c = 1.0 / a_fac_c / 3.0; // 1/(3*delta_Z)
     return a_fac_c;
