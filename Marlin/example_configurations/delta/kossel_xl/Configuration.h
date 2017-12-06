@@ -484,20 +484,12 @@
 
   // uncomment to add G33 Delta Auto-Calibration (Enable EEPROM_SETTINGS to store results)
   //#define DELTA_AUTO_CALIBRATION
-  #define DELTA_HEIGHT_FOLLOWS_Z_OFFSET_CHANGE
 
   // NOTE NB all values for DELTA_* values MUST be floating point, so always have a decimal point in them
 
   #if ENABLED(DELTA_AUTO_CALIBRATION)
     // set the default number of probe points : n*n (1 -> 7)
     #define DELTA_CALIBRATION_DEFAULT_POINTS 4
-    
-    // uncomment and get the factors from autocalibrate-autotune G33 A
-    // leave comments to calculate defaults
-    //#define H_FACTOR 1.03
-    //#define R_FACTOR 2.26
-    //#define A_FACTOR 0.54
-
   #endif
 
   #if ENABLED(DELTA_AUTO_CALIBRATION) || ENABLED(DELTA_CALIBRATION_MENU)

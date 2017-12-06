@@ -3,7 +3,7 @@
 
 ## Marlin 1.1-AC
 
-This is the developers branch for Marlin-AC, always ahead of official Marlin. Finally the developments here will be 'approuved' and included in https://github.com/MarlinFirmware/Marlin
+This is the developers branch for Marlin-AC, always ahead of official Marlin. Finally the developments here will be 'approuved' and included in https://github.com/MarlinFirmware/Marlin. If features are shown as 'closed' they will only be available in Marlin-AC.
 
 
 ## Stable Release Branch
@@ -14,6 +14,14 @@ This branch contains the latest tagged version of Marlin (currently 1.1.6 – Oc
 ## Current Status: In Development
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
+
+G-force-6-AC
+- new convergence matrices
+- new auto tune
+- new raw calibration
+- calibration reference
+- kinematic iterations
+- updated documentation
 
 1.1.6f-AC
 - undo raw calibration
