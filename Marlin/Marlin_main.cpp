@@ -5642,52 +5642,28 @@ void home_all_axes() { gcode_G28(true); }
 
     h_fac = r_quot / (2.0 / 3.0);
     h_fac = 1.0 / h_fac; // (2/3)/CR
-//    print_signed_float(PSTR("h_factor"), h_fac);
-//    SERIAL_EOL();
     return h_fac;
   }
 
   static float auto_tune_o() {
     const float o_fac = zprobe_zoffset - cal_ref;
     refresh_delta_auto_cal();
-//    print_signed_float(PSTR("o_factor"), o_fac);
-//    SERIAL_EOL();
     return o_fac;
   }
 
-  static float auto_tune_rt() {
+  static float auto_tune_r() {
     const float diff = -0.01;
     float r_fac = 0.0,
           z_at_pt[NPP + 1] = { 0.0 },
           delta_e[ABC] = {0.0},
           delta_r = {0.0},
-//          delta_d = {0.0},
           delta_t[ABC] = {0.0};
 
     delta_r = diff;
     calc_kinematics_diff_probe_points(z_at_pt, delta_e, delta_r, delta_t);     
-    r_fac = (z_at_pt[__A] + z_at_pt[__B] + z_at_pt[__C]) / 3.0;
+    r_fac = (z_at_pt[__A] + z_at_pt[__B] + z_at_pt[__C])
+          + (z_at_pt[_BC] + z_at_pt[_CA] + z_at_pt[_AB]) / 6.0;
     r_fac = diff / r_fac / 3.0; // 1/(3*delta_Z)
-//    print_signed_float(PSTR("rt_factor"), r_fac);
-//    SERIAL_EOL();
-    return r_fac;
-  }
-
-  static float auto_tune_ro() {
-    const float diff = -0.01;
-    float r_fac = 0.0,
-          z_at_pt[NPP + 1] = { 0.0 },
-          delta_e[ABC] = {0.0},
-          delta_r = {0.0},
-//          delta_d = {0.0},
-          delta_t[ABC] = {0.0};
-
-    delta_r = diff;
-    calc_kinematics_diff_probe_points(z_at_pt, delta_e, delta_r, delta_t);     
-    r_fac = (z_at_pt[_BC] + z_at_pt[_CA] + z_at_pt[_AB]) / 3.0;
-    r_fac = diff / r_fac / 3.0; // 1/(3*delta_Z)
-//    print_signed_float(PSTR("ro_factor"), r_fac);
-//    SERIAL_EOL();
     return r_fac;
   }
 
@@ -5697,7 +5673,6 @@ void home_all_axes() { gcode_G28(true); }
           z_at_pt[NPP + 1] = { 0.0 },
           delta_e[ABC] = {0.0},
           delta_r = {0.0},
-//          delta_d = {0.0},
           delta_t[ABC] = {0.0};
 
     LOOP_XYZ(axis) {
@@ -5708,61 +5683,8 @@ void home_all_axes() { gcode_G28(true); }
       a_fac += z_at_pt[uint8_t((axis * _4P_STEP) + 1 + _7P_STEP)] / 6.0;
     }
     a_fac = diff / a_fac / 3.0; // 1/(3*delta_Z)
-//    print_signed_float(PSTR("a_factor"), a_fac);
-//    SERIAL_EOL();
     return a_fac;
   }
-/*
-  static float auto_tune_dt() {
-    const float diff = 0.01;
-    float d_fac = 0.0,
-          z_at_pt[NPP + 1] = { 0.0 },
-          delta_e[ABC] = {0.0},
-          delta_r = {0.0},
-          delta_d = {0.0},
-          delta_t[ABC] = {0.0};
-
-    delta_d = diff;
-    calc_kinematics_diff_probe_points(z_at_pt, delta_e, delta_r, delta_t, delta_d);     
-    d_fac = (z_at_pt[__A] + z_at_pt[__B] + z_at_pt[__C]) / 3.0;
-    d_fac = diff / d_fac / 3.0; // 1/(3*delta_Z)
-//    print_signed_float(PSTR("dt_factor"), d_fac);
-//    SERIAL_EOL();
-    return d_fac;
-  }
-
-  static float auto_tune_do() {
-    const float diff = 0.01;
-    float d_fac = 0.0,
-          z_at_pt[NPP + 1] = { 0.0 },
-          delta_e[ABC] = {0.0},
-          delta_r = {0.0},
-          delta_d = {0.0},
-          delta_t[ABC] = {0.0};
-
-    delta_d = diff;
-    calc_kinematics_diff_probe_points(z_at_pt, delta_e, delta_r, delta_t, delta_d);     
-    d_fac = (z_at_pt[_BC] + z_at_pt[_CA] + z_at_pt[_AB]) / 3.0;
-    d_fac = diff / d_fac / 3.0; // 1/(3*delta_Z)
-//    print_signed_float(PSTR("do_factor"), d_fac);
-//    SERIAL_EOL();
-    return d_fac;
-  }
-
-  static float auto_tune_r_d(float rt_fac, float ro_fac,float dt_fac,float do_fac,) {
-    rt_fac = 1/ rt_fac;
-    ro_fac = 1/ ro_fac;
-    dt_fac = 1/ dt_fac;
-    do_fac = 1/ do_fac;
-    determinant = 1.0 / (rt_fac * do_fac - ro_fac * dt_fac);
-    float temp = rt_fac;
-    rt_fac = do_fac / determinant;
-    do_fac = temp / determinant;
-    temp = ro_fac;
-    ro_fac = -dt_fac / determinant;
-    dt_fac = -temp / determinant;
-  }
-*/
 
   /**
    * G33 - Delta '1-4-7-point' Auto-Calibration
@@ -5817,9 +5739,8 @@ void home_all_axes() { gcode_G28(true); }
       return;
     }
 
-    const bool towers_set           = !parser.boolval('T'),
-//               diagonal_rod_set     = parser.boolval('D') && towers_set,
-               stow_after_each      = parser.boolval('E'),
+    const bool towers_set           = !parser.seen('T'),
+               stow_after_each      = parser.seen('E'),
                _0p_calibration      = probe_points == 0,
                _1p_calibration      = probe_points == 1,
                _4p_calibration      = probe_points == 2,
@@ -5831,12 +5752,8 @@ void home_all_axes() { gcode_G28(true); }
                _endstop_results     = probe_points != 1,
                _angle_results       = (probe_points >= 3 || probe_points == 0) && towers_set;
     const static char save_message[] PROGMEM = "Save with M500 and/or copy to Configuration.h";
-//    bool calc_diagonal_rod = false;
     float h_factor = auto_tune_h(),
-          rt_factor = auto_tune_rt(),
-          ro_factor = auto_tune_ro(),
-//          dt_factor = auto_tune_dt(),
-//          do_factor = auto_tune_do(),
+          r_factor = auto_tune_r(),
           a_factor = auto_tune_a(),
           o_factor = auto_tune_o();
     int8_t iterations = 0;
@@ -5849,7 +5766,6 @@ void home_all_axes() { gcode_G28(true); }
             delta_endstop_adj[C_AXIS]
           },
           r_old = delta_radius,
-//          d_old = delta_diagonal_rod,
           h_old = delta_height,
           a_old[ABC] = {
             delta_tower_angle_trim[A_AXIS],
@@ -5920,6 +5836,7 @@ void home_all_axes() { gcode_G28(true); }
       // Solve matrices
 
       if ((zero_std_dev < test_precision || iterations <= force_iterations) && zero_std_dev > calibration_precision) {
+
       /**
        * convergence matrices:
        * see https://github.com/LVD-AC/Marlin-AC/tree/1.1.x-AC/documentation for  
@@ -5929,7 +5846,6 @@ void home_all_axes() { gcode_G28(true); }
 
         #define ZP(N,I) ((N) * calc_z_at_pt[I] / 4.0) // 4.0 = divider to normalize to integers
         #define Z12(I) ZP(12, I)
-        #define Z6(I) ZP(6, I)
         #define Z4(I) ZP(4, I)
         #define Z2(I) ZP(2, I)
         #define Z1(I) ZP(1, I)
@@ -5943,14 +5859,12 @@ void home_all_axes() { gcode_G28(true); }
           // set roll-back point
           COPY(e_old, delta_endstop_adj);
           r_old = delta_radius;
-//          d_old = delta_diagonal_rod;
           h_old = delta_height;
           COPY(a_old, delta_tower_angle_trim);
         }
 
         float e_delta[ABC] = { 0.0 },
               r_delta = 0.0,
-//              d_delta = 0.0
               t_delta[ABC] = { 0.0 },
               calc_z_at_pt[NPP + 1],
               sub_std_dev = 999.9,
@@ -5961,7 +5875,6 @@ void home_all_axes() { gcode_G28(true); }
                 delta_endstop_adj[C_AXIS]
               },
               sub_r_old = delta_radius,
-//              sub_d_old = delta_diagonal_rod,
               sub_h_old = delta_height,
               sub_a_old[ABC] = {
                 delta_tower_angle_trim[A_AXIS],
@@ -5992,13 +5905,13 @@ void home_all_axes() { gcode_G28(true); }
                 e_delta[A_AXIS] = (+Z4(__A) -Z2(__B) -Z2(__C)) * h_factor  +Z4(CEN);
                 e_delta[B_AXIS] = (-Z2(__A) +Z4(__B) -Z2(__C)) * h_factor  +Z4(CEN);
                 e_delta[C_AXIS] = (-Z2(__A) -Z2(__B) +Z4(__C)) * h_factor  +Z4(CEN);
-                r_delta         = (+Z4(__A) +Z4(__B) +Z4(__C) -Z12(CEN)) * rt_factor;
+                r_delta         = (+Z4(__A) +Z4(__B) +Z4(__C) -Z12(CEN)) * r_factor;
               }
               else { // see 4 point calibration (opposites) matrix
                 e_delta[A_AXIS] = (-Z4(_BC) +Z2(_CA) +Z2(_AB)) * h_factor  +Z4(CEN);
                 e_delta[B_AXIS] = (+Z2(_BC) -Z4(_CA) +Z2(_AB)) * h_factor  +Z4(CEN);
                 e_delta[C_AXIS] = (+Z2(_BC) +Z2(_CA) -Z4(_AB)) * h_factor  +Z4(CEN);
-                r_delta         = (+Z4(_BC) +Z4(_CA) +Z4(_AB) -Z12(CEN)) * ro_factor;
+                r_delta         = (+Z4(_BC) +Z4(_CA) +Z4(_AB) -Z12(CEN)) * r_factor;
               }
               break;
 
@@ -6006,22 +5919,17 @@ void home_all_axes() { gcode_G28(true); }
               e_delta[A_AXIS] = (+Z2(__A) -Z1(__B) -Z1(__C) -Z2(_BC) +Z1(_CA) +Z1(_AB)) * h_factor  +Z4(CEN);
               e_delta[B_AXIS] = (-Z1(__A) +Z2(__B) -Z1(__C) +Z1(_BC) -Z2(_CA) +Z1(_AB)) * h_factor  +Z4(CEN);
               e_delta[C_AXIS] = (-Z1(__A) -Z1(__B) +Z2(__C) +Z1(_BC) +Z1(_CA) -Z2(_AB)) * h_factor  +Z4(CEN);
-              r_delta         = (+Z2(__A) +Z2(__B) +Z2(__C) -Z6(CEN)) * rt_factor
-                              + (+Z2(_BC) +Z2(_CA) +Z2(_AB) -Z6(CEN)) * ro_factor;
+              r_delta         = (+Z2(__A) +Z2(__B) +Z2(__C) +Z2(_BC) +Z2(_CA) +Z2(_AB) -Z12(CEN)) * r_factor;
   
               if (towers_set) { // see 7 point tower angle calibration (towers & opposites) matrix
                 t_delta[A_AXIS] = (+Z0(__A) -Z4(__B) +Z4(__C) +Z0(_BC) -Z4(_CA) +Z4(_AB) +Z0(CEN)) * a_factor;
                 t_delta[B_AXIS] = (+Z4(__A) +Z0(__B) -Z4(__C) +Z4(_BC) +Z0(_CA) -Z4(_AB) +Z0(CEN)) * a_factor;
                 t_delta[C_AXIS] = (-Z4(__A) +Z4(__B) +Z0(__C) -Z4(_BC) +Z4(_CA) +Z0(_AB) +Z0(CEN)) * a_factor;
-//                if (calc_diagonal_rod)
-//                  d_delta       = (+Z2(__A) +Z2(__B) +Z2(__C) -Z6(CEN)) * dt_factor
-//                                + (+Z2(_BC) +Z2(_CA) +Z2(_AB) -Z6(CEN)) * do_factor;
               }
               break;
           }
           LOOP_XYZ(axis) delta_endstop_adj[axis] += e_delta[axis] + o_factor;
           delta_radius += r_delta;
-//          delta_diagonal_rod += d_delta;
           LOOP_XYZ(axis) delta_tower_angle_trim[axis] += t_delta[axis];
 
           sub_std_dev = calc_kinematics_probe_points(calc_z_at_pt, e_delta, r_delta / 2.0, t_delta);
@@ -6036,26 +5944,21 @@ void home_all_axes() { gcode_G28(true); }
               SERIAL_PROTOCOLPGM("std dev:");
               SERIAL_PROTOCOL_F(sub_std_dev, 3);
               SERIAL_EOL();
-              print_calibration_results(calc_z_at_pt, true, true);
-              print_calibration_settings(true, true);
+              print_calibration_results(calc_z_at_pt, _tower_results, _opposite_results);
+              print_calibration_settings(_endstop_results, _angle_results);
             }     
 
             // set sub-roll-back point
             COPY(sub_e_old, delta_endstop_adj);
             sub_r_old = delta_radius;
-//            sub_d_old = delta_diagonal_rod;
             sub_h_old = delta_height;
             COPY(sub_a_old, delta_tower_angle_trim);
 
             // recalc factors
             h_factor = auto_tune_h();
-            rt_factor = auto_tune_rt();
-            ro_factor = auto_tune_ro();
-//            dt_factor = auto_tune_dt();
-//            do_factor = auto_tune_do();
+            r_factor = auto_tune_r();
             a_factor = auto_tune_a();
             o_factor = auto_tune_o();
-//            if (calc_diagonal_rod) auto_tune_r_d(rt_factor, ro_factor, dt_factor, do_factor);
           }
         }
 
@@ -6064,7 +5967,6 @@ void home_all_axes() { gcode_G28(true); }
         // roll one sub-iteration back
         COPY(delta_endstop_adj, sub_e_old);
         delta_radius = sub_r_old;
-//        delta_diagonal_rod = sub_d_old;
         delta_height = sub_h_old;
         COPY(delta_tower_angle_trim, sub_a_old);
       }
@@ -6072,7 +5974,6 @@ void home_all_axes() { gcode_G28(true); }
         // roll one iteration back
         COPY(delta_endstop_adj, e_old);
         delta_radius = r_old;
-//        delta_diagonal_rod = d_old;
         delta_height = h_old;
         COPY(delta_tower_angle_trim, a_old);
       }
@@ -6099,56 +6000,29 @@ void home_all_axes() { gcode_G28(true); }
         print_calibration_results(z_at_pt, _tower_results, _opposite_results);
 
       if (verbose_level != 0) {                                    // !dry run
-        if ((zero_std_dev >= test_precision && iterations > force_iterations) || zero_std_dev <= calibration_precision) {
+        if ((zero_std_dev >= test_precision && iterations > force_iterations) || zero_std_dev <= calibration_precision) { // end iterations
+          SERIAL_PROTOCOLPGM("Calibration OK");
+          SERIAL_PROTOCOL_SP(32);
           #if HAS_BED_PROBE
-//            if (calc_diagonal_rod = diagonal_rod_set)
-          #endif
-          { // end iterations
-            SERIAL_PROTOCOLPGM("Calibration OK");
-            SERIAL_PROTOCOL_SP(32);
-            #if HAS_BED_PROBE
-              if (zero_std_dev >= test_precision && !_1p_calibration)
-                SERIAL_PROTOCOLPGM("rolling back.");
-              else
-            #endif
-              {
-                SERIAL_PROTOCOLPGM("std dev:");
-                SERIAL_PROTOCOL_F(zero_std_dev_min, 3);
-              }
-            SERIAL_EOL();
-            char mess[21];
-            strcpy_P(mess, PSTR("Calibration sd:"));
-            if (zero_std_dev_min < 1)
-              sprintf_P(&mess[15], PSTR("0.%03i"), (int)round(zero_std_dev_min * 1000.0));
+            if (zero_std_dev >= test_precision && !_1p_calibration)
+              SERIAL_PROTOCOLPGM("rolling back.");
             else
-              sprintf_P(&mess[15], PSTR("%03i.x"), (int)round(zero_std_dev_min));
-            lcd_setstatus(mess);
-            print_calibration_settings(_endstop_results, _angle_results);
-            serialprintPGM(save_message);
-            SERIAL_EOL();
-          }
-/*
-          else { // re-intitialize do loop
-            calc_diagonal_rod = true;
-            iterations -= 1;
-            zero_std_dev = 999.0;
-            zero_std_dev_min = zero_std_dev;
-
-            // recalc factors
-            h_factor = auto_tune_h();
-            rt_factor = auto_tune_rt();
-            ro_factor = auto_tune_ro();
-            dt_factor = auto_tune_dt();
-            do_factor = auto_tune_do();
-            a_factor = auto_tune_a();
-            o_factor = auto_tune_o();
-            auto_tune_r_d(rt_factor, ro_factor, dt_factor, do_factor);
-
-            SERIAL_PROTOCOLPGM("Calibrating diagonal rod");
-            SERIAL_PROTOCOL_SP(22);
-            SERIAL_PROTOCOLPGM("rolling back.");
-          }
-*/
+          #endif
+            {
+              SERIAL_PROTOCOLPGM("std dev:");
+              SERIAL_PROTOCOL_F(zero_std_dev_min, 3);
+            }
+          SERIAL_EOL();
+          char mess[21];
+          strcpy_P(mess, PSTR("Calibration sd:"));
+          if (zero_std_dev_min < 1)
+            sprintf_P(&mess[15], PSTR("0.%03i"), (int)round(zero_std_dev_min * 1000.0));
+          else
+            sprintf_P(&mess[15], PSTR("%03i.x"), (int)round(zero_std_dev_min));
+          lcd_setstatus(mess);
+          print_calibration_settings(_endstop_results, _angle_results);
+          serialprintPGM(save_message);
+          SERIAL_EOL();
         }
         else {                                                     // !end iterations
           char mess[15];
