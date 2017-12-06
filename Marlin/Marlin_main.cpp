@@ -5361,7 +5361,7 @@ void home_all_axes() { gcode_G28(true); }
     #if HAS_BED_PROBE
       zprobe_zoffset;
     #else
-      0.0;
+      Z_PROBE_OFFSET_FROM_EXTRUDER;
     #endif
   }
 
