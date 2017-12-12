@@ -74,7 +74,7 @@
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
-#define STRING_CONFIG_H_AUTHOR "(LVD, G-force6-AC)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "(LVD, G-force-7-AC)" // Who made the changes.
 #define SHOW_BOOTSCREEN
 #define STRING_SPLASH_LINE1 SHORT_BUILD_VERSION // will be shown during bootup in line 1
 #define STRING_SPLASH_LINE2 WEBSITE_URL         // will be shown during bootup in line 2
@@ -512,7 +512,7 @@
     // Set the radius for the calibration probe points - max 0.9 * DELTA_PRINTABLE_RADIUS for non-eccentric probes
     #define DELTA_CALIBRATION_RADIUS 75 // mm
     // Set the steprate for papertest probing
-    #define PROBE_MANUALLY_STEP 0.025
+    #define PROBE_MANUALLY_STEP 0.05
   #endif
 
   // Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).

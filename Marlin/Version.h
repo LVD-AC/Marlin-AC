@@ -35,7 +35,7 @@
   /**
    * Marlin release version identifier
    */
-  #define SHORT_BUILD_VERSION "G-force6-AC"
+  #define SHORT_BUILD_VERSION "G-force-7-AC"
 
   /**
    * Verbose version identifier which should contain a reference to the location
