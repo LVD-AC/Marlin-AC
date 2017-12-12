@@ -5368,6 +5368,21 @@ void home_all_axes() { gcode_G28(true); }
     #endif
   }
 
+  static void ac_cleanup(
+    #if HOTENDS > 1
+      const uint8_t old_tool_index
+    #endif
+  ) {
+    #if ENABLED(DELTA_HOME_TO_SAFE_ZONE)
+      do_blocking_move_to_z(delta_clip_start_height);
+    #endif
+    STOW_PROBE();
+    clean_up_after_endstop_or_probe_move();
+    #if HOTENDS > 1
+      tool_change(old_tool_index, 0, true);
+    #endif
+  }
+
   static void print_signed_float(const char * const prefix, const float &f) {
     SERIAL_PROTOCOLPGM("  ");
     serialprintPGM(prefix);
@@ -5428,30 +5443,10 @@ void home_all_axes() { gcode_G28(true); }
   }
 
   /**
-   *  - Move to the print ceiling (DELTA_HOME_TO_SAFE_ZONE only)
-   *  - Stow the probe
-   *  - Restore endstops state
-   *  - Select the old tool, if needed
-   */
-  static void ac_cleanup(
-    #if HOTENDS > 1
-      const uint8_t old_tool_index
-    #endif
-  ) {
-    #if ENABLED(DELTA_HOME_TO_SAFE_ZONE)
-      do_blocking_move_to_z(delta_clip_start_height);
-    #endif
-    STOW_PROBE();
-    clean_up_after_endstop_or_probe_move();
-    #if HOTENDS > 1
-      tool_change(old_tool_index, 0, true);
-    #endif
-  }
-
-  /**
    *  - Calculate the standard deviation from the zero plane
    */
-  static float std_dev_points(const float z_pt[NPP + 1], const bool _0p_cal, const bool _1p_cal, const bool _4p_cal, const bool _4p_opp) {
+  static float std_dev_points(float z_pt[NPP + 1], const bool _0p_cal, const bool _1p_cal, const bool _4p_cal, const bool _4p_opp) {
+    LOOP_CAL_ALL(rad) z_pt[rad] +=  cal_ref;
     if (!_0p_cal) {
       float S2 = sq(z_pt[CEN]);
       int16_t N = 1;
@@ -5467,17 +5462,20 @@ void home_all_axes() { gcode_G28(true); }
   }
 
   /**
-   *  - Probe a point using the reference
+   *  - Probe a point
    */
   static float calibration_probe(float nx, float ny, bool stow) {
     return
     #if HAS_BED_PROBE
-      probe_pt(nx, ny, stow, 0, false) + cal_ref;
+      probe_pt(nx, ny, stow, 0, false);
     #else
-      lcd_probe_pt(nx, ny) + cal_ref;
+      lcd_probe_pt(nx, ny);
     #endif
   }
 
+  /**
+   *  - Probe a grid
+   */
   static bool probe_calibration_points(float z_pt[NPP + 1], const int8_t probe_points, const bool towers_set, const bool stow_after_each) {
     const bool _0p_calibration      = probe_points == 0,
                _1p_calibration      = probe_points == 1,
@@ -5558,9 +5556,10 @@ void home_all_axes() { gcode_G28(true); }
   }
 
   /**
-   * kinematics routines
+   * kinematics routines and auto tune matrix scaling parameters:
    * see https://github.com/LVD-AC/Marlin-AC/tree/1.1.x-AC/documentation for  
    *  - formulae for approximative forward kinematics in the end-stop displacement matrix
+   *  - definition of the matrix scaling parameters
    */
   static void reverse_kinematics_probe_points(float z_pt[NPP + 1], float mm_at_pt_axis[NPP + 1][ABC]) {
     float pos[XYZ] = { 0.0 };
@@ -5579,12 +5578,12 @@ void home_all_axes() { gcode_G28(true); }
   static void forward_kinematics_probe_points(float mm_at_pt_axis[NPP + 1][ABC], float z_pt[NPP + 1]) {
     const float cr = delta_calibration_radius / delta_radius;
 
-    #define ZP(N,I,A) ((1 / 3.0 + cr * (N) / 3.0 ) * mm_at_pt_axis[I][A])
-    #define Z00(I, A) ZP( 0, I, A)
-    #define Zp1(I, A) ZP(+1, I, A)
-    #define Zm1(I, A) ZP(-1, I, A)
-    #define Zp2(I, A) ZP(+2, I, A)
-    #define Zm2(I, A) ZP(-2, I, A)
+    #define ZPP(N,I,A) ((1 / 3.0 + cr * (N) / 3.0 ) * mm_at_pt_axis[I][A])
+    #define Z00(I, A) ZPP( 0, I, A)
+    #define Zp1(I, A) ZPP(+1, I, A)
+    #define Zm1(I, A) ZPP(-1, I, A)
+    #define Zp2(I, A) ZPP(+2, I, A)
+    #define Zm2(I, A) ZPP(-2, I, A)
 
     z_pt[CEN] = Z00(CEN, A_AXIS) + Z00(CEN, B_AXIS) + Z00(CEN, C_AXIS);
     z_pt[__A] = Zp2(__A, A_AXIS) + Zm1(__A, B_AXIS) + Zm1(__A, C_AXIS);
@@ -5605,11 +5604,9 @@ void home_all_axes() { gcode_G28(true); }
     delta_radius += delta_r;
     LOOP_XYZ(axis) delta_tower_angle_trim[axis] += delta_t[axis];
     recalc_delta_settings();
-
     reverse_kinematics_probe_points(z_pt, new_mm_at_pt_axis);
 
     LOOP_XYZ(axis) LOOP_CAL_ALL(rad) diff_mm_at_pt_axis[rad][axis] -= new_mm_at_pt_axis[rad][axis] + delta_e[axis];
-    LOOP_XYZ(axis) LOOP_CAL_ALL(rad) diff_mm_at_pt_axis[rad][axis] = -diff_mm_at_pt_axis[rad][axis];
     forward_kinematics_probe_points(diff_mm_at_pt_axis, z_pt);
 
     LOOP_CAL_RAD(rad) z_pt[rad] -= z_pt[CEN] - z_center;
@@ -5620,20 +5617,6 @@ void home_all_axes() { gcode_G28(true); }
     recalc_delta_settings();
   }
 
-  static void calc_kinematics_probe_points(float z_pt[NPP + 1], float delta_e[ABC], float delta_r, float delta_t[ABC]) {
-    float diff_z_pt[NPP + 1];
-
-    LOOP_CAL_ALL(rad) diff_z_pt[rad] = z_pt[rad];
-    calc_kinematics_diff_probe_points(diff_z_pt, delta_e, delta_r, delta_t);
-    LOOP_CAL_ALL(rad) z_pt[rad] -= diff_z_pt[rad];
-  }
-
-  
-  /**
-   * auto tune matrix scaling parameters:
-   * see https://github.com/LVD-AC/Marlin-AC/tree/1.1.x-AC/documentation for  
-   *  - definition of the matrix scaling parameters
-   */
   static float auto_tune_h() {
     const float r_quot = delta_calibration_radius / delta_radius;
     float h_fac = 0.0;
@@ -5650,7 +5633,7 @@ void home_all_axes() { gcode_G28(true); }
   }
 
   static float auto_tune_r() {
-    const float diff = -0.01;
+    const float diff = 0.01;
     float r_fac = 0.0,
           z_pt[NPP + 1] = { 0.0 },
           delta_e[ABC] = {0.0},
@@ -5659,13 +5642,13 @@ void home_all_axes() { gcode_G28(true); }
 
     delta_r = diff;
     calc_kinematics_diff_probe_points(z_pt, delta_e, delta_r, delta_t);     
-    r_fac = (z_pt[__A] + z_pt[__B] + z_pt[__C] + z_pt[_BC] + z_pt[_CA] + z_pt[_AB]) / 6.0;
+    r_fac = -(z_pt[__A] + z_pt[__B] + z_pt[__C] + z_pt[_BC] + z_pt[_CA] + z_pt[_AB]) / 6.0;
     r_fac = diff / r_fac / 3.0; // 1/(3*delta_Z)
     return r_fac;
   }
 
   static float auto_tune_a() {
-    const float diff = -0.01;
+    const float diff = 0.01;
     float a_fac = 0.0,
           z_pt[NPP + 1] = { 0.0 },
           delta_e[ABC] = {0.0},
@@ -5676,8 +5659,8 @@ void home_all_axes() { gcode_G28(true); }
       LOOP_XYZ(axis_2) delta_t[axis_2] = 0.0;
       delta_t[axis] = diff;
       calc_kinematics_diff_probe_points(z_pt, delta_e, delta_r, delta_t);     
-      a_fac -= z_pt[uint8_t((axis * _4P_STEP) - _7P_STEP + NPP) % NPP + 1] / 6.0;
-      a_fac += z_pt[uint8_t((axis * _4P_STEP) + 1 + _7P_STEP)] / 6.0;
+      a_fac += z_pt[uint8_t((axis * _4P_STEP) - _7P_STEP + NPP) % NPP + 1] / 6.0;
+      a_fac -= z_pt[uint8_t((axis * _4P_STEP) + 1 + _7P_STEP)] / 6.0;
     }
     a_fac = diff / a_fac / 3.0; // 1/(3*delta_Z)
     return a_fac;
@@ -5731,7 +5714,7 @@ void home_all_axes() { gcode_G28(true); }
     }
 
     const int8_t verbose_level = parser.byteval('V', 1);
-    if (!WITHIN(verbose_level, 0, 3)) {  // set to 4 for debugging
+    if (!WITHIN(verbose_level, 0, 3)) {
       SERIAL_PROTOCOLLNPGM("?(V)erbose level is implausible (0-3).");
       return;
     }
@@ -5750,15 +5733,15 @@ void home_all_axes() { gcode_G28(true); }
                _endstop_results     = probe_points != 1,
                _angle_results       = (probe_points >= 3 || probe_points == 0) && towers_set;
     const static char save_message[] PROGMEM = "Save with M500 and/or copy to Configuration.h";
-    float h_factor = auto_tune_h(),
-          o_factor = auto_tune_o(),
-          r_factor = auto_tune_r(),
-          a_factor = auto_tune_a();
     int8_t iterations = 0;
     float test_precision,
           zero_std_dev = (verbose_level ? 999.0 : 0.0), // 0.0 in dry-run mode : forced end
           zero_std_dev_min = zero_std_dev,
           zero_std_dev_old = zero_std_dev,
+          h_factor,
+          o_factor,
+          r_factor,
+          a_factor,
           e_old[ABC] = {
             delta_endstop_adj[A_AXIS],
             delta_endstop_adj[B_AXIS],
@@ -5831,19 +5814,11 @@ void home_all_axes() { gcode_G28(true); }
         SERIAL_EOL();
         return AC_CLEANUP();
       }
-      LOOP_CAL_ALL(rad) z_at_pt[rad] -= o_factor;
       zero_std_dev = std_dev_points(z_at_pt, _0p_calibration, _1p_calibration, _4p_calibration, _4p_opposite_points);
 
       // Solve matrices
 
       if ((zero_std_dev < test_precision || iterations <= force_iterations) && zero_std_dev > calibration_precision) {
-
-        #define ZP(N,I) ((N) * calc_z_at_pt[I] / 4.0) // 4.0 = divider to normalize to integers
-        #define Z12(I) ZP(12, I)
-        #define Z4(I) ZP(4, I)
-        #define Z2(I) ZP(2, I)
-        #define Z1(I) ZP(1, I)
-        #define Z0(I) ZP(0, I)
 
         #if !HAS_BED_PROBE
           test_precision = 0.00; // forced end
@@ -5859,121 +5834,71 @@ void home_all_axes() { gcode_G28(true); }
 
         float e_delta[ABC] = { 0.0 },
               r_delta = 0.0,
-              t_delta[ABC] = { 0.0 },
-              calc_z_at_pt[NPP + 1],
-              sub_std_dev = 999.9,
-              sub_test_precision,
-              sub_e_old[ABC] = {
-                delta_endstop_adj[A_AXIS],
-                delta_endstop_adj[B_AXIS],
-                delta_endstop_adj[C_AXIS]
-              },
-              sub_r_old = delta_radius,
-              sub_h_old = delta_height,
-              sub_a_old[ABC] = {
-                delta_tower_angle_trim[A_AXIS],
-                delta_tower_angle_trim[B_AXIS],
-                delta_tower_angle_trim[C_AXIS]
-              };
-        int8_t sub_iterations = 0;
+              t_delta[ABC] = { 0.0 };
 
-        COPY(calc_z_at_pt, z_at_pt);
+        /**
+         * convergence matrices:
+         * see https://github.com/LVD-AC/Marlin-AC/tree/1.1.x-AC/documentation for  
+         *  - definition of the matrix scaling parameters
+         *  - matrices for 4 and 7 point calibration
+         */
+        #define ZP(N,I) ((N) * z_at_pt[I] / 4.0) // 4.0 = divider to normalize to integers
+        #define Z12(I) ZP(12, I)
+        #define Z4(I) ZP(4, I)
+        #define Z2(I) ZP(2, I)
+        #define Z1(I) ZP(1, I)
+        #define Z0(I) ZP(0, I)
 
-        do { // iterate with kinematics
+        // calculate factors
+        h_factor = auto_tune_h();
+        o_factor = auto_tune_o();
+        r_factor = auto_tune_r();
+        a_factor = auto_tune_a();
 
-          sub_test_precision = sub_std_dev;
-          sub_iterations++;
-
-          /**
-           * convergence matrices:
-           * see https://github.com/LVD-AC/Marlin-AC/tree/1.1.x-AC/documentation for  
-           *  - definition of the matrix scaling parameters
-           *  - matrices for 4 and 7 point calibration
-           */
-          switch (probe_points) {
-            case 0:
-              test_precision = 0.00; // forced end
+        switch (probe_points) {
+          case 0:
+            test_precision = 0.00; // forced end
             break;
 
-            case 1:
-              test_precision = 0.00; // forced end
-              LOOP_XYZ(axis) e_delta[axis] = +Z4(CEN);
-              break;
+          case 1:
+            test_precision = 0.00; // forced end
+            LOOP_XYZ(axis) e_delta[axis] = +Z4(CEN);
+            break;
 
-            case 2:
-              if (towers_set) { // see 4 point calibration (towers) matrix
-                e_delta[A_AXIS] = (+Z4(__A) -Z2(__B) -Z2(__C)) * h_factor  +Z4(CEN);
-                e_delta[B_AXIS] = (-Z2(__A) +Z4(__B) -Z2(__C)) * h_factor  +Z4(CEN);
-                e_delta[C_AXIS] = (-Z2(__A) -Z2(__B) +Z4(__C)) * h_factor  +Z4(CEN);
-                r_delta         = (+Z4(__A) +Z4(__B) +Z4(__C) -Z12(CEN)) * r_factor;
-              }
-              else { // see 4 point calibration (opposites) matrix
-                e_delta[A_AXIS] = (-Z4(_BC) +Z2(_CA) +Z2(_AB)) * h_factor  +Z4(CEN);
-                e_delta[B_AXIS] = (+Z2(_BC) -Z4(_CA) +Z2(_AB)) * h_factor  +Z4(CEN);
-                e_delta[C_AXIS] = (+Z2(_BC) +Z2(_CA) -Z4(_AB)) * h_factor  +Z4(CEN);
-                r_delta         = (+Z4(_BC) +Z4(_CA) +Z4(_AB) -Z12(CEN)) * r_factor;
-              }
-              break;
+          case 2:
+            if (towers_set) { // see 4 point calibration (towers) matrix
+              e_delta[A_AXIS] = (+Z4(__A) -Z2(__B) -Z2(__C)) * h_factor  +Z4(CEN);
+              e_delta[B_AXIS] = (-Z2(__A) +Z4(__B) -Z2(__C)) * h_factor  +Z4(CEN);
+              e_delta[C_AXIS] = (-Z2(__A) -Z2(__B) +Z4(__C)) * h_factor  +Z4(CEN);
+              r_delta         = (+Z4(__A) +Z4(__B) +Z4(__C) -Z12(CEN)) * r_factor;
+            }
+            else { // see 4 point calibration (opposites) matrix
+              e_delta[A_AXIS] = (-Z4(_BC) +Z2(_CA) +Z2(_AB)) * h_factor  +Z4(CEN);
+              e_delta[B_AXIS] = (+Z2(_BC) -Z4(_CA) +Z2(_AB)) * h_factor  +Z4(CEN);
+              e_delta[C_AXIS] = (+Z2(_BC) +Z2(_CA) -Z4(_AB)) * h_factor  +Z4(CEN);
+              r_delta         = (+Z4(_BC) +Z4(_CA) +Z4(_AB) -Z12(CEN)) * r_factor;
+            }
+            break;
 
-            default: // see 7 point calibration (towers & opposites) matrix
-              e_delta[A_AXIS] = (+Z2(__A) -Z1(__B) -Z1(__C) -Z2(_BC) +Z1(_CA) +Z1(_AB)) * h_factor  +Z4(CEN);
-              e_delta[B_AXIS] = (-Z1(__A) +Z2(__B) -Z1(__C) +Z1(_BC) -Z2(_CA) +Z1(_AB)) * h_factor  +Z4(CEN);
-              e_delta[C_AXIS] = (-Z1(__A) -Z1(__B) +Z2(__C) +Z1(_BC) +Z1(_CA) -Z2(_AB)) * h_factor  +Z4(CEN);
-              r_delta         = (+Z2(__A) +Z2(__B) +Z2(__C) +Z2(_BC) +Z2(_CA) +Z2(_AB) -Z12(CEN)) * r_factor;
-  
-              if (towers_set) { // see 7 point tower angle calibration (towers & opposites) matrix
-                t_delta[A_AXIS] = (+Z0(__A) -Z4(__B) +Z4(__C) +Z0(_BC) -Z4(_CA) +Z4(_AB) +Z0(CEN)) * a_factor;
-                t_delta[B_AXIS] = (+Z4(__A) +Z0(__B) -Z4(__C) +Z4(_BC) +Z0(_CA) -Z4(_AB) +Z0(CEN)) * a_factor;
-                t_delta[C_AXIS] = (-Z4(__A) +Z4(__B) +Z0(__C) -Z4(_BC) +Z4(_CA) +Z0(_AB) +Z0(CEN)) * a_factor;
-              }
-              break;
-          }
-          // set R agressive, fine tune with kinematic iterations 
-          const float divider = (sub_iterations == 1 ? 1.0 : 2.0);
-          LOOP_XYZ(axis) delta_endstop_adj[axis] += e_delta[axis] + o_factor;
-          delta_radius += r_delta / divider;
-          LOOP_XYZ(axis) delta_tower_angle_trim[axis] += t_delta[axis];
+          default: // see 7 point calibration (towers & opposites) matrix
+            e_delta[A_AXIS] = (+Z2(__A) -Z1(__B) -Z1(__C) -Z2(_BC) +Z1(_CA) +Z1(_AB)) * h_factor  +Z4(CEN);
+            e_delta[B_AXIS] = (-Z1(__A) +Z2(__B) -Z1(__C) +Z1(_BC) -Z2(_CA) +Z1(_AB)) * h_factor  +Z4(CEN);
+            e_delta[C_AXIS] = (-Z1(__A) -Z1(__B) +Z2(__C) +Z1(_BC) +Z1(_CA) -Z2(_AB)) * h_factor  +Z4(CEN);
+            r_delta         = (+Z2(__A) +Z2(__B) +Z2(__C) +Z2(_BC) +Z2(_CA) +Z2(_AB) -Z12(CEN)) * r_factor;
 
-          calc_kinematics_probe_points(calc_z_at_pt, e_delta, r_delta / divider, t_delta);
-          sub_std_dev = std_dev_points(calc_z_at_pt, _0p_calibration, _1p_calibration, _4p_calibration, _4p_opposite_points);
-
-          if (sub_std_dev < sub_test_precision){
-
-            if (verbose_level == 4) { // debug mode
-              char mess[19];
-              sprintf_P(mess, PSTR("Sub-Iteration : %02i"), (int)sub_iterations);
-              SERIAL_PROTOCOL(mess);
-              SERIAL_PROTOCOL_SP(28);
-              SERIAL_PROTOCOLPGM("std dev:");
-              SERIAL_PROTOCOL_F(sub_std_dev, 3);
-              SERIAL_EOL();
-              print_calibration_settings(_endstop_results, _angle_results);
-            }     
-
-            // set sub-roll-back point
-            COPY(sub_e_old, delta_endstop_adj);
-            sub_r_old = delta_radius;
-            sub_h_old = delta_height;
-            COPY(sub_a_old, delta_tower_angle_trim);
-
-            // recalc factors
-            h_factor = auto_tune_h();
-            o_factor = auto_tune_o();
-            r_factor = auto_tune_r();
-            a_factor = auto_tune_a();
-          }
+            if (towers_set) { // see 7 point tower angle calibration (towers & opposites) matrix
+              t_delta[A_AXIS] = (+Z0(__A) -Z4(__B) +Z4(__C) +Z0(_BC) -Z4(_CA) +Z4(_AB) +Z0(CEN)) * a_factor;
+              t_delta[B_AXIS] = (+Z4(__A) +Z0(__B) -Z4(__C) +Z4(_BC) +Z0(_CA) -Z4(_AB) +Z0(CEN)) * a_factor;
+              t_delta[C_AXIS] = (-Z4(__A) +Z4(__B) +Z0(__C) -Z4(_BC) +Z4(_CA) +Z0(_AB) +Z0(CEN)) * a_factor;
+            }
+            break;
         }
-
-        while (sub_std_dev < sub_test_precision); 
-
-        // roll 1 sub-iteration back
-        COPY(delta_endstop_adj, sub_e_old);
-        delta_radius = sub_r_old;
-        delta_height = sub_h_old;
-        COPY(delta_tower_angle_trim, sub_a_old);
+        LOOP_XYZ(axis) delta_endstop_adj[axis] += e_delta[axis] + o_factor;
+        delta_radius += r_delta;
+        LOOP_XYZ(axis) delta_tower_angle_trim[axis] += t_delta[axis];
       }
       else if (zero_std_dev >= test_precision) {   
-        // roll X iterations back
+        // roll back
         COPY(delta_endstop_adj, e_old);
         delta_radius = r_old;
         delta_height = h_old;
