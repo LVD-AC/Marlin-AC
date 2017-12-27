@@ -18,6 +18,7 @@ Marlin-AC is in constant development to make it perform better and more stable b
 Xmas-AC
 - merge update to Marlin 1.1.8
 - include G-force
+- destructive Xmas bug fixed
 
 1.1.7-AC
 - merge update to Marlin 1.1.7
