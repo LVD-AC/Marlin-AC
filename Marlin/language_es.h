@@ -166,7 +166,7 @@
 #define MSG_BLTOUCH_RESET                   _UxGT("Reiniciar BLTouch")
 #define MSG_HOME                            _UxGT("Home")  // Used as MSG_HOME " " MSG_X MSG_Y MSG_Z " " MSG_FIRST
 #define MSG_FIRST                           _UxGT("inic.")
-#define MSG_ZPROBE_ZOFFSET                  _UxGT("Desfase Z")
+#define MSG_SUPPL_ZOFFSET                   _UxGT("Desfase Z")
 #define MSG_BABYSTEP_X                      _UxGT("Micropaso X")
 #define MSG_BABYSTEP_Y                      _UxGT("Micropaso Y")
 #define MSG_BABYSTEP_Z                      _UxGT("Micropaso Z")

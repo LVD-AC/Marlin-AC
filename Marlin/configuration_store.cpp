@@ -74,7 +74,7 @@
  *  229            GRID_MAX_POINTS_Y                (uint8_t)
  *  230 G29 S3 XYZ z_values[][]                     (float x9, up to float x81) +288
  *
- *  266  M851      zprobe_zoffset                   (float)
+ *  266  M851      suppl_zoffset                   (float)
  *
  * ABL_PLANAR:                                      36 bytes
  *  270            planner.bed_level_matrix         (matrix_3x3 = float x9)
@@ -259,10 +259,6 @@ void MarlinSettings::postprocess() {
     //set_bed_leveling_enabled(leveling_is_on);
   #endif
 
-  #if ENABLED(DELTA_AUTO_CALIBRATION)
-    refresh_auto_cal_ref(NAN);
-  #endif
-
   #if HAS_MOTOR_CURRENT_PWM
     stepper.refresh_motor_power();
   #endif
@@ -407,7 +403,7 @@ void MarlinSettings::postprocess() {
       for (uint8_t q = mesh_num_x * mesh_num_y; q--;) EEPROM_WRITE(dummy);
     #endif // MESH_BED_LEVELING
 
-    EEPROM_WRITE(zprobe_zoffset);
+    EEPROM_WRITE(suppl_zoffset);
 
     //
     // Planar Bed Leveling matrix
@@ -878,7 +874,7 @@ void MarlinSettings::postprocess() {
         for (uint16_t q = mesh_num_x * mesh_num_y; q--;) EEPROM_READ(dummy);
       #endif // MESH_BED_LEVELING
 
-      EEPROM_READ(zprobe_zoffset);
+      EEPROM_READ(suppl_zoffset);
 
       //
       // Planar Bed Leveling matrix
@@ -1425,7 +1421,7 @@ void MarlinSettings::reset() {
     reset_bed_level();
   #endif
 
-  zprobe_zoffset = Z_PROBE_OFFSET_FROM_EXTRUDER;
+  suppl_zoffset = 0.0;
 
   #if ENABLED(DELTA)
     const float adj[ABC] = DELTA_ENDSTOP_ADJ,
@@ -2029,14 +2025,12 @@ void MarlinSettings::reset() {
     /**
      * Probe Offset
      */
-    #if HAS_BED_PROBE
-      if (!forReplay) {
-        CONFIG_ECHO_START;
-        SERIAL_ECHOLNPGM("Z-Probe Offset (mm):");
-      }
+    if (!forReplay) {
       CONFIG_ECHO_START;
-      SERIAL_ECHOLNPAIR("  M851 Z", LINEAR_UNIT(zprobe_zoffset));
-    #endif
+      SERIAL_ECHOLNPGM("Z-Probe Offset (mm):");
+    }
+    CONFIG_ECHO_START;
+    SERIAL_ECHOLNPAIR("  M851 Z", LINEAR_UNIT(suppl_zoffset));
 
     /**
      * Bed Skew Correction

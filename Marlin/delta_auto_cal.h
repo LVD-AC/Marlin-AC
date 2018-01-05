@@ -36,8 +36,6 @@ enum CalEnum {                               // the 7 main calibration points - 
   _CA      = __C + _7P_STEP,
 };
 
-extern float cal_ref;
-
 #define LOOP_CAL_PT(VAR, S, N) for (uint8_t VAR=S; VAR<=NPP; VAR+=N)
 #define F_LOOP_CAL_PT(VAR, S, N) for (float VAR=S; VAR<NPP+0.9999; VAR+=N)
 #define I_LOOP_CAL_PT(VAR, S, N) for (float VAR=S; VAR>CEN+0.9999; VAR-=N)
@@ -45,6 +43,6 @@ extern float cal_ref;
 #define LOOP_CAL_RAD(VAR) LOOP_CAL_PT(VAR, __A, _7P_STEP)
 #define LOOP_CAL_ACT(VAR, _4P, _OP) LOOP_CAL_PT(VAR, _OP ? _AB : __A, _4P ? _4P_STEP : _7P_STEP)
 
-void refresh_auto_cal_ref(const float z_shift);
+float lcd_probe_pt(const float &rx, const float &ry);
 
 #endif // __DELTA_AUTO_CAL_H__

@@ -291,7 +291,7 @@
    *   allows you to get the center area of the Mesh populated (and edited) quicker. This allows you to
    *   perform a small print and check out your settings quicker. You do not need to populate the
    *   entire mesh to use it. (You don't want to spend a lot of time generating a mesh only to realize
-   *   you don't have the resolution or zprobe_zoffset set correctly. The Mesh generation
+   *   you don't have the resolution or Z_PROBE_OFFSET_FROM_EXTRUDER set correctly. The Mesh generation
    *   gathers points closest to where the nozzle is located unless you specify an (X,Y) coordinate pair.
    *
    *   The Unified Bed Leveling uses a lot of EEPROM storage to hold its data. And it takes some effort
@@ -412,9 +412,9 @@
           // its height is.)
 
           save_ubl_active_state_and_disable();
-          z1 -= get_z_correction(UBL_PROBE_PT_1_X, UBL_PROBE_PT_1_Y) /* + zprobe_zoffset */ ;
-          z2 -= get_z_correction(UBL_PROBE_PT_2_X, UBL_PROBE_PT_2_Y) /* + zprobe_zoffset */ ;
-          z3 -= get_z_correction(UBL_PROBE_PT_3_X, UBL_PROBE_PT_3_Y) /* + zprobe_zoffset */ ;
+          z1 -= get_z_correction(UBL_PROBE_PT_1_X, UBL_PROBE_PT_1_Y) /* + suppl_zoffset */ ;
+          z2 -= get_z_correction(UBL_PROBE_PT_2_X, UBL_PROBE_PT_2_Y) /* + suppl_zoffset */ ;
+          z3 -= get_z_correction(UBL_PROBE_PT_3_X, UBL_PROBE_PT_3_Y) /* + suppl_zoffset */ ;
 
           do_blocking_move_to_xy(0.5 * (MESH_MAX_X - (MESH_MIN_X)), 0.5 * (MESH_MAX_Y - (MESH_MIN_Y)));
           tilt_mesh_based_on_3pts(z1, z2, z3);
@@ -1224,11 +1224,9 @@
 
     find_mean_mesh_height();
 
-    #if HAS_BED_PROBE
-      SERIAL_PROTOCOLPGM("zprobe_zoffset: ");
-      SERIAL_PROTOCOL_F(zprobe_zoffset, 7);
-      SERIAL_EOL();
-    #endif
+    SERIAL_PROTOCOLPGM("suppl_zoffset: ");
+    SERIAL_PROTOCOL_F(suppl_zoffset, 7);
+    SERIAL_EOL();
 
     SERIAL_ECHOLNPAIR("MESH_MIN_X  " STRINGIFY(MESH_MIN_X) "=", MESH_MIN_X);
     SERIAL_ECHOLNPAIR("MESH_MIN_Y  " STRINGIFY(MESH_MIN_Y) "=", MESH_MIN_Y);
@@ -1675,7 +1673,7 @@
             }
           #endif
 
-          measured_z -= get_z_correction(rx, ry) /* + zprobe_zoffset */ ;
+          measured_z -= get_z_correction(rx, ry) /* + suppl_zoffset */ ;
 
           #if ENABLED(DEBUG_LEVELING_FEATURE)
             if (DEBUGGING(LEVELING)) {

@@ -387,7 +387,7 @@ void report_current_position();
   extern float z_endstop_adj;
 #endif
 
-extern float zprobe_zoffset;
+extern float suppl_zoffset;
 #if HAS_BED_PROBE
   #define DEPLOY_PROBE() set_probe_deployed(true)
   #define STOW_PROBE() set_probe_deployed(false)
