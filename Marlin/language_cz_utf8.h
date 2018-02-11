@@ -269,7 +269,7 @@
 #define MSG_BLTOUCH_STOW                    _UxGT("BLTouch Zasunout")
 #define MSG_HOME                            _UxGT("Domů")  // Used as MSG_HOME " " MSG_X MSG_Y MSG_Z " " MSG_FIRST
 #define MSG_FIRST                           _UxGT("první")
-#define MSG_ZPROBE_ZOFFSET                  _UxGT("Z ofset")
+#define MSG_SUPPL_ZOFFSET                   _UxGT("Z ofset")
 #define MSG_BABYSTEP_X                      _UxGT("Babystep X")
 #define MSG_BABYSTEP_Y                      _UxGT("Babystep Y")
 #define MSG_BABYSTEP_Z                      _UxGT("Babystep Z")

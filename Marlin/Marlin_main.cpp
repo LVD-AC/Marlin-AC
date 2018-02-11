@@ -521,7 +521,7 @@ static millis_t stepper_inactive_time = (DEFAULT_STEPPER_DEACTIVE_TIME) * 1000UL
 
 uint8_t target_extruder;
 
-float zprobe_zoffset; // Initialized by settings.load()
+float suppl_zoffset; // Initialized by settings.load()
 
 #if HAS_ABL
   float xy_probe_feedrate_mm_s = MMM_TO_MMS(XY_PROBE_SPEED);
@@ -1325,6 +1325,7 @@ bool get_target_extruder_from_command(const uint16_t code) {
     #elif ENABLED(DELTA)
       soft_endstop_min[axis] = base_min_pos(axis);
       soft_endstop_max[axis] = axis == Z_AXIS ? delta_height : base_max_pos(axis);
+      if (axis == Z_AXIS) soft_endstop_max[Z_AXIS] -= suppl_zoffset;
     #else
       soft_endstop_min[axis] = base_min_pos(axis);
       soft_endstop_max[axis] = base_max_pos(axis);
@@ -1465,26 +1466,25 @@ static void set_axis_is_at_home(const AxisEnum axis) {
   /**
    * Z Probe Z Homing? Account for the probe's Z offset.
    */
-  #if HAS_BED_PROBE && Z_HOME_DIR < 0
-    if (axis == Z_AXIS) {
-      #if HOMING_Z_WITH_PROBE
+  if (axis == Z_AXIS) {
+    current_position[axis] -= suppl_zoffset;
+    #if HOMING_Z_WITH_PROBE
 
-        current_position[Z_AXIS] -= zprobe_zoffset;
+      current_position[Z_AXIS] -= Z_PROBE_OFFSET_FROM_EXTRUDER;
 
-        #if ENABLED(DEBUG_LEVELING_FEATURE)
-          if (DEBUGGING(LEVELING)) {
-            SERIAL_ECHOLNPGM("*** Z HOMED WITH PROBE (Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN) ***");
-            SERIAL_ECHOLNPAIR("> zprobe_zoffset = ", zprobe_zoffset);
-          }
-        #endif
-
-      #elif ENABLED(DEBUG_LEVELING_FEATURE)
-
-        if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("*** Z HOMED TO ENDSTOP (Z_MIN_PROBE_ENDSTOP) ***");
-
+      #if ENABLED(DEBUG_LEVELING_FEATURE)
+        if (DEBUGGING(LEVELING)) {
+          SERIAL_ECHOLNPGM("*** Z HOMED WITH PROBE (Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN) ***");
+          SERIAL_ECHOLNPAIR("> Offset = ", Z_PROBE_OFFSET_FROM_EXTRUDER + suppl_zoffset);
+        }
       #endif
-    }
-  #endif
+
+    #elif ENABLED(DEBUG_LEVELING_FEATURE)
+
+      if (DEBUGGING(LEVELING)) SERIAL_ECHOLNPGM("*** Z HOMED TO ENDSTOP (Z_MIN_PROBE_ENDSTOP) ***");
+
+    #endif
+  }
 
   #if ENABLED(DEBUG_LEVELING_FEATURE)
     if (DEBUGGING(LEVELING)) {
@@ -1701,7 +1701,7 @@ void do_blocking_move_to_xy(const float &rx, const float &ry, const float &fr_mm
 //  - Reset the command timeout
 //  - Enable the endstops (for endstop moves)
 //
-static void setup_for_endstop_or_probe_move() {
+void setup_for_endstop_or_probe_move() {
   #if ENABLED(DEBUG_LEVELING_FEATURE)
     if (DEBUGGING(LEVELING)) DEBUG_POS("setup_for_endstop_or_probe_move", current_position);
   #endif
@@ -1711,7 +1711,7 @@ static void setup_for_endstop_or_probe_move() {
   refresh_cmd_timeout();
 }
 
-static void clean_up_after_endstop_or_probe_move() {
+void clean_up_after_endstop_or_probe_move() {
   #if ENABLED(DEBUG_LEVELING_FEATURE)
     if (DEBUGGING(LEVELING)) DEBUG_POS("clean_up_after_endstop_or_probe_move", current_position);
   #endif
@@ -1734,7 +1734,7 @@ static void clean_up_after_endstop_or_probe_move() {
     #endif
 
     float z_dest = z_raise;
-    if (zprobe_zoffset < 0) z_dest -= zprobe_zoffset;
+    if (Z_PROBE_OFFSET_FROM_EXTRUDER + suppl_zoffset < 0) z_dest -= Z_PROBE_OFFSET_FROM_EXTRUDER + suppl_zoffset;
 
     if (z_dest > current_position[Z_AXIS])
       do_blocking_move_to_z(z_dest);
@@ -2239,7 +2239,7 @@ static void clean_up_after_endstop_or_probe_move() {
       // If the nozzle is above the travel height then
       // move down quickly before doing the slow probe
       float z = Z_CLEARANCE_DEPLOY_PROBE;
-      if (zprobe_zoffset < 0) z -= zprobe_zoffset;
+      if (Z_PROBE_OFFSET_FROM_EXTRUDER + suppl_zoffset < 0) z -= Z_PROBE_OFFSET_FROM_EXTRUDER + suppl_zoffset;
 
       if (z < current_position[Z_AXIS]) {
 
@@ -2340,7 +2340,7 @@ static void clean_up_after_endstop_or_probe_move() {
 
     float measured_z = NAN;
     if (!DEPLOY_PROBE()) {
-      measured_z = run_z_probe() + (probe_relative ? zprobe_zoffset : 0.0);
+      measured_z = run_z_probe() + Z_PROBE_OFFSET_FROM_EXTRUDER + suppl_zoffset;
 
       if (!stow)
         do_blocking_move_to_z(current_position[Z_AXIS] + Z_CLEARANCE_BETWEEN_PROBES, MMM_TO_MMS(Z_PROBE_SPEED_FAST));
@@ -3753,7 +3753,7 @@ inline void gcode_G4() {
     #if HAS_BED_PROBE
       SERIAL_ECHOPAIR("Probe Offset X:", X_PROBE_OFFSET_FROM_EXTRUDER);
       SERIAL_ECHOPAIR(" Y:", Y_PROBE_OFFSET_FROM_EXTRUDER);
-      SERIAL_ECHOPAIR(" Z:", zprobe_zoffset);
+      SERIAL_ECHOPAIR(" Z:", Z_PROBE_OFFSET_FROM_EXTRUDER);
       #if X_PROBE_OFFSET_FROM_EXTRUDER > 0
         SERIAL_ECHOPGM(" (Right");
       #elif X_PROBE_OFFSET_FROM_EXTRUDER < 0
@@ -3770,9 +3770,9 @@ inline void gcode_G4() {
       #elif X_PROBE_OFFSET_FROM_EXTRUDER != 0
         SERIAL_ECHOPGM("-Center");
       #endif
-      if (zprobe_zoffset < 0)
+      if (Z_PROBE_OFFSET_FROM_EXTRUDER < 0)
         SERIAL_ECHOPGM(" & Below");
-      else if (zprobe_zoffset > 0)
+      else if (Z_PROBE_OFFSET_FROM_EXTRUDER > 0)
         SERIAL_ECHOPGM(" & Above");
       else
         SERIAL_ECHOPGM(" & Same Z as");
@@ -3852,7 +3852,7 @@ inline void gcode_G4() {
     sync_plan_position();
 
     // Move all carriages together linearly until an endstop is hit.
-    current_position[X_AXIS] = current_position[Y_AXIS] = current_position[Z_AXIS] = (delta_height + 10);
+    current_position[X_AXIS] = current_position[Y_AXIS] = current_position[Z_AXIS] = (delta_height - suppl_zoffset + 10);
     feedrate_mm_s = homing_feedrate(X_AXIS);
     buffer_line_to_current_position();
     stepper.synchronize();
@@ -5369,7 +5369,32 @@ void home_all_axes() { gcode_G28(true); }
 
 #if ENABLED(DELTA_AUTO_CALIBRATION)
 
-  static void ac_cleanup(
+  bool ac_home() {
+    endstops.enable(true);
+    if (!home_delta())
+      return false;
+    endstops.not_homing();
+    return true;
+  }
+
+  void ac_setup(const bool reset_bed) {
+    #if HOTENDS > 1
+      const uint8_t old_tool_index = active_extruder;
+      tool_change(0, 0, true);
+      #define AC_CLEANUP() ac_cleanup(old_tool_index)
+    #else
+      #define AC_CLEANUP() ac_cleanup()
+    #endif
+
+    stepper.synchronize();
+    setup_for_endstop_or_probe_move();
+
+    #if HAS_LEVELING
+      if(reset_bed) reset_bed_level(); // After full calibration bed-level data is no longer valid
+    #endif
+  }
+
+  void ac_cleanup(
     #if HOTENDS > 1
       const uint8_t old_tool_index
     #endif
@@ -5377,14 +5402,16 @@ void home_all_axes() { gcode_G28(true); }
     #if ENABLED(DELTA_HOME_TO_SAFE_ZONE)
       do_blocking_move_to_z(delta_clip_start_height);
     #endif
-    STOW_PROBE();
+    #if HAS_BED_PROBE
+      STOW_PROBE();
+    #endif
     clean_up_after_endstop_or_probe_move();
     #if HOTENDS > 1
       tool_change(old_tool_index, 0, true);
     #endif
   }
 
-  static void print_signed_float(const char * const prefix, const float &f) {
+  void print_signed_float(const char * const prefix, const float &f) {
     SERIAL_PROTOCOLPGM("  ");
     serialprintPGM(prefix);
     SERIAL_PROTOCOLCHAR(':');
@@ -5418,7 +5445,7 @@ void home_all_axes() { gcode_G28(true); }
     }
     if (!end_stops && !tower_angles) {
       SERIAL_PROTOCOL_SP(30);
-      print_signed_float(PSTR("Offset"), cal_ref);
+      print_signed_float(PSTR("Offset"), Z_PROBE_OFFSET_FROM_EXTRUDER + suppl_zoffset);
     }
     SERIAL_EOL();
   }
@@ -5452,7 +5479,6 @@ void home_all_axes() { gcode_G28(true); }
    */
   static float std_dev_points(float z_pt[NPP + 1], const bool _0p_cal, const bool _1p_cal, const bool _4p_cal, const bool _4p_opp) {
     if (!_0p_cal) {
-      LOOP_CAL_ALL(rad) z_pt[rad] +=  cal_ref;
       float S2 = sq(z_pt[CEN]);
       int16_t N = 1;
       if (!_1p_cal) { // std dev from zero plane
@@ -5476,6 +5502,14 @@ void home_all_axes() { gcode_G28(true); }
     #else
       lcd_probe_pt(nx, ny);
     #endif
+  }
+
+  static float probe_z_shift(const float centre) {
+    STOW_PROBE();
+    endstops.enable_z_probe(false);
+    float z_shift = lcd_probe_pt(0, 0) - centre;
+    endstops.enable_z_probe(true);
+    return z_shift;
   }
 
   /**
@@ -5550,11 +5584,7 @@ void home_all_axes() { gcode_G28(true); }
           LOOP_CAL_RAD(rad)
             z_pt[rad] /= _7P_STEP / steps;
 
-        // goto centre
-        const float old_feedrate_mm_s = feedrate_mm_s;
-        feedrate_mm_s = XY_PROBE_FEEDRATE_MM_S;
-        do_blocking_move_to_xy(0, 0);
-        feedrate_mm_s = old_feedrate_mm_s;
+        do_blocking_move_to_xy(0.0, 0.0);
       }
     }
     return true;
@@ -5672,14 +5702,12 @@ void home_all_axes() { gcode_G28(true); }
    * Parameters:
    *
    *   Pn  Number of probe points:
-   *      P-1    Calibrates z_offset only with center probe and paper test.
-   *      P0     Normalizes settings without probing.
-   *      P1     Calibrates height only with center probe.
-   *      P2     Probe center and towers. Calibrate height, endstops and delta radius.
-   *      P3     Probe all positions: center, towers and opposite towers. Calibrate all.
-   *      P4-P10 Probe all positions at different itermediate locations and average them.
-   *
-   *   Zn.nn  Shifts the z_offset calibration up/down by the specified amount.
+   *      P-1      Checks the z_offset with a center probe and paper test.
+   *      P0       Normalizes calibration.
+   *      P1       Calibrates height only with center probe.
+   *      P2       Probe center and towers. Calibrate height, endstops and delta radius.
+   *      P3       Probe all positions: center, towers and opposite towers. Calibrate all.
+   *      P4-P10   Probe all positions at different itermediate locations and average them.
    *
    *   T   Don't calibrate tower angle corrections
    *
@@ -5703,12 +5731,6 @@ void home_all_axes() { gcode_G28(true); }
       return;
     }
 
-    float z_shift = parser.floatval('Z', 0.0);
-    if (!WITHIN(z_shift, -5.0, 5.0)) {
-      SERIAL_PROTOCOLLNPGM("?(Z)-shift is implausible (-5 - 5).");
-      return;
-    }
-
     const float calibration_precision = parser.floatval('C', 0.0);
     if (calibration_precision < 0) {
       SERIAL_PROTOCOLLNPGM("?(C)alibration precision is implausible (>=0).");
@@ -5729,7 +5751,6 @@ void home_all_axes() { gcode_G28(true); }
 
     const bool towers_set           = !parser.seen('T'),
                stow_after_each      = parser.seen('E'),
-               _Zo_calibration      = probe_points == -1,
                _0p_calibration      = probe_points == 0,
                _1p_calibration      = probe_points == 1 || probe_points == -1,
                _4p_calibration      = probe_points == 2,
@@ -5775,36 +5796,22 @@ void home_all_axes() { gcode_G28(true); }
       }
     }
 
-    #if HAS_LEVELING
-      reset_bed_level(); // After calibration bed-level data is no longer valid
-    #endif
-
-    #if HOTENDS > 1
-      const uint8_t old_tool_index = active_extruder;
-      tool_change(0, 0, true);
-      #define AC_CLEANUP() ac_cleanup(old_tool_index)
-    #else
-      #define AC_CLEANUP() ac_cleanup()
-    #endif
-
     // Report settings
 
-    const char *checkingac = PSTR("Checking... AC"); // TODO: Make translatable string
+    const char *checkingac = PSTR("Checking... AC");
     serialprintPGM(checkingac);
     if (verbose_level == 0) SERIAL_PROTOCOLPGM(" (DRY-RUN)");
     SERIAL_EOL();
-    lcd_setstatusPGM(checkingac);
+    char mess[11];
+    strcpy_P(mess, checkingac);
+    lcd_setstatus(mess);
 
     print_calibration_settings(_endstop_results, _angle_results);
 
-    stepper.synchronize();
-    setup_for_endstop_or_probe_move();
-    endstops.enable(true);
-    if (!_0p_calibration) {
-      if (!home_delta())
-        return;
-      endstops.not_homing();
-    }
+    ac_setup(!_0p_calibration && !_1p_calibration);
+
+    if (!_0p_calibration)
+      if (!ac_home()) return;
 
     do { // start iterations
 
@@ -5856,17 +5863,6 @@ void home_all_axes() { gcode_G28(true); }
         #define Z0(I) ZP(0, I)
 
         // calculate factors
-        if (_Zo_calibration) {
-          #if HAS_BED_PROBE
-            STOW_PROBE();
-            endstops.enable_z_probe(false);
-            z_shift = lcd_probe_pt(0, 0) - z_at_pt[CEN];
-            endstops.enable_z_probe(true);
-          #else
-            z_shift = 0.0;
-          #endif
-        }
-        refresh_auto_cal_ref(z_shift);
         const float cr_old = delta_calibration_radius;
         if (_7p_9_centre) delta_calibration_radius *= 0.9;
         h_factor = auto_tune_h();
@@ -5876,6 +5872,10 @@ void home_all_axes() { gcode_G28(true); }
 
         switch (probe_points) {
           case -1:
+            #if HAS_BED_PROBE
+              suppl_zoffset += probe_z_shift(z_at_pt[CEN]);
+            #endif
+
           case 0:
             test_precision = 0.00; // forced end
             break;
@@ -5936,7 +5936,7 @@ void home_all_axes() { gcode_G28(true); }
 
         // adjust delta_height and endstops by the max amount
         const float z_temp = MAX3(delta_endstop_adj[A_AXIS], delta_endstop_adj[B_AXIS], delta_endstop_adj[C_AXIS]);
-        delta_height -= z_temp + z_shift;
+        delta_height -= z_temp;
         LOOP_XYZ(axis) delta_endstop_adj[axis] -= z_temp;
       }
       recalc_delta_settings();
@@ -6005,12 +6005,7 @@ void home_all_axes() { gcode_G28(true); }
           sprintf_P(&mess[15], PSTR("%03i.x"), (int)round(zero_std_dev));
         lcd_setstatus(mess);
       }
-
-      endstops.enable(true);
-      if (!home_delta())
-        return;
-      endstops.not_homing();
-
+      if (!ac_home()) return;
     }
     while (((zero_std_dev < test_precision && iterations < 31) || iterations <= force_iterations) && zero_std_dev > calibration_precision);
 
@@ -8841,6 +8836,7 @@ inline void gcode_M205() {
           }
         #endif
       }
+    recalc_delta_settings();
     }
     #if ENABLED(DEBUG_LEVELING_FEATURE)
       if (DEBUGGING(LEVELING)) {
@@ -9155,11 +9151,11 @@ inline void gcode_M226() {
 
 #if ENABLED(BABYSTEPPING)
 
-  #if ENABLED(BABYSTEP_ZPROBE_OFFSET)
-    FORCE_INLINE void mod_zprobe_zoffset(const float &offs) {
-      zprobe_zoffset += offs;
+  #if ENABLED(BABYSTEP_SUPPL_ZOFFSET)
+    FORCE_INLINE void mod_suppl_zoffset(const float &offs) {
+      suppl_zoffset += offs;
       SERIAL_ECHO_START();
-      SERIAL_ECHOLNPAIR(MSG_PROBE_Z_OFFSET ": ", zprobe_zoffset);
+      SERIAL_ECHOLNPAIR(MSG_SUPPL_ZOFFSET ": ", suppl_zoffset);
     }
   #endif
 
@@ -9172,16 +9168,16 @@ inline void gcode_M226() {
         if (parser.seenval(axis_codes[a]) || (a == Z_AXIS && parser.seenval('S'))) {
           const float offs = constrain(parser.value_axis_units((AxisEnum)a), -2, 2);
           thermalManager.babystep_axis((AxisEnum)a, offs * planner.axis_steps_per_mm[a]);
-          #if ENABLED(BABYSTEP_ZPROBE_OFFSET)
-            if (a == Z_AXIS && (!parser.seen('P') || parser.value_bool())) mod_zprobe_zoffset(offs);
+          #if ENABLED(BABYSTEP_SUPPL_ZOFFSET)
+            if (a == Z_AXIS && (!parser.seen('P') || parser.value_bool())) mod_suppl_zoffset(offs);
           #endif
         }
     #else
       if (parser.seenval('Z') || parser.seenval('S')) {
         const float offs = constrain(parser.value_axis_units(Z_AXIS), -2, 2);
         thermalManager.babystep_axis(Z_AXIS, offs * planner.axis_steps_per_mm[Z_AXIS]);
-        #if ENABLED(BABYSTEP_ZPROBE_OFFSET)
-          if (!parser.seen('P') || parser.value_bool()) mod_zprobe_zoffset(offs);
+        #if ENABLED(BABYSTEP_SUPPL_ZOFFSET)
+          if (!parser.seen('P') || parser.value_bool()) mod_suppl_zoffset(offs);
         #endif
       }
     #endif
@@ -9887,23 +9883,19 @@ inline void gcode_M502() {
 
 #endif // ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
 
-#if HAS_BED_PROBE
-
-  inline void gcode_M851() {
-    SERIAL_ECHO_START();
-    SERIAL_ECHOPGM(MSG_PROBE_Z_OFFSET);
-    if (parser.seen('Z')) {
-      const float value = parser.value_linear_units();
-      if (!WITHIN(value, Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX)) {
-        SERIAL_ECHOLNPGM(" " MSG_Z_MIN " " STRINGIFY(Z_PROBE_OFFSET_RANGE_MIN) " " MSG_Z_MAX " " STRINGIFY(Z_PROBE_OFFSET_RANGE_MAX));
-        return;
-      }
-      zprobe_zoffset = value;
+inline void gcode_M851() {
+  SERIAL_ECHO_START();
+  SERIAL_ECHOPGM(MSG_SUPPL_ZOFFSET);
+  if (parser.seen('Z')) {
+    const float value = parser.value_linear_units();
+    if (!WITHIN(value, SUPPL_ZOFFSET_RANGE_MIN, SUPPL_ZOFFSET_RANGE_MAX)) {
+      SERIAL_ECHOLNPGM(" " MSG_Z_MIN " " STRINGIFY(SUPPL_ZOFFSET_RANGE_MIN) " " MSG_Z_MAX " " STRINGIFY(SUPPL_ZOFFSET_RANGE_MAX));
+      return;
     }
-    SERIAL_ECHOLNPAIR(": ", zprobe_zoffset);
+    suppl_zoffset = value;
   }
-
-#endif // HAS_BED_PROBE
+  SERIAL_ECHOLNPAIR(": ", suppl_zoffset);
+}
 
 #if ENABLED(SKEW_CORRECTION_GCODE)
 
@@ -12251,11 +12243,9 @@ void process_parsed_command() {
           break;
       #endif
 
-      #if HAS_BED_PROBE
-        case 851: // M851: Set Z Probe Z Offset
-          gcode_M851();
-          break;
-      #endif // HAS_BED_PROBE
+      case 851: // M851: Set Z Probe Z Offset
+        gcode_M851();
+        break;
 
       #if ENABLED(SKEW_CORRECTION_GCODE)
         case 852: // M852: Set Skew factors

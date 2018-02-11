@@ -8,12 +8,16 @@ This is the developers branch for Marlin-AC, always ahead of official Marlin. Fi
 
 ## Stable Release Branch
 
-This branch contains the latest tagged version of Marlin (currently 1.1.8 – Xmas 2017) with all the additional AC developments to date.
+This branch contains the latest tagged version of Marlin (currently 1.1.8(bis) – Xmas 2017) with all the additional AC developments to date.
 
 
 ## Current Status: In Development
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
+
+G-force8-AC
+- more functions
+- engage M851 + LCD z_offset for no-probe deltas and all printers
 
 Xmas-AC
 - merge update to Marlin 1.1.8
@@ -38,8 +42,7 @@ G-force6-AC
 - updated documentation
 
 1.1.6f-AC
-- undo raw calibration
-- delta_height follows z-offset
+- (abandonned)
 
 1.1.6e-AC
 - probe error handling

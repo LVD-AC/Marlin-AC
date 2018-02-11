@@ -813,15 +813,15 @@
   /**
    * Bed Probe dependencies
    */
+  #ifndef SUPPL_ZOFFSET_RANGE_MIN
+    #define SUPPL_ZOFFSET_RANGE_MIN -20
+  #endif
+  #ifndef SUPPL_ZOFFSET_RANGE_MAX
+    #define SUPPL_ZOFFSET_RANGE_MAX 20
+  #endif
   #if HAS_BED_PROBE
     #if ENABLED(ENDSTOPPULLUPS) && HAS_Z_MIN_PROBE_PIN
       #define ENDSTOPPULLUP_ZMIN_PROBE
-    #endif
-    #ifndef Z_PROBE_OFFSET_RANGE_MIN
-      #define Z_PROBE_OFFSET_RANGE_MIN -20
-    #endif
-    #ifndef Z_PROBE_OFFSET_RANGE_MAX
-      #define Z_PROBE_OFFSET_RANGE_MAX 20
     #endif
     #ifndef XY_PROBE_SPEED
       #ifdef HOMING_FEEDRATE_XY
@@ -838,8 +838,10 @@
   #else
     #undef X_PROBE_OFFSET_FROM_EXTRUDER
     #undef Y_PROBE_OFFSET_FROM_EXTRUDER
+    #undef Z_PROBE_OFFSET_FROM_EXTRUDER
     #define X_PROBE_OFFSET_FROM_EXTRUDER 0
     #define Y_PROBE_OFFSET_FROM_EXTRUDER 0
+    #define Z_PROBE_OFFSET_FROM_EXTRUDER 0
   #endif
 
   /**
