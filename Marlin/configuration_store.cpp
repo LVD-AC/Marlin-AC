@@ -74,7 +74,7 @@
  *  229            GRID_MAX_POINTS_Y                (uint8_t)
  *  230 G29 S3 XYZ z_values[][]                     (float x9, up to float x81) +288
  *
- *  266  M851      suppl_zoffset                   (float)
+ *  266  M851      zprobe_zoffset                   (float)
  *
  * ABL_PLANAR:                                      36 bytes
  *  270            planner.bed_level_matrix         (matrix_3x3 = float x9)
@@ -202,10 +202,6 @@ MarlinSettings settings;
   #include "mesh_bed_leveling.h"
 #endif
 
-#if ENABLED(DELTA_AUTO_CALIBRATION)
-  #include "delta_auto_cal.h"
-#endif
-
 #if HAS_TRINAMIC
   #include "stepper_indirection.h"
 #endif
@@ -243,6 +239,9 @@ void MarlinSettings::postprocess() {
 
   #if DISABLED(NO_VOLUMETRICS)
     planner.calculate_volumetric_multipliers();
+  #else
+    for (uint8_t i = COUNT(planner.e_factor); i--;)
+      planner.refresh_e_factor(i);
   #endif
 
   #if HAS_HOME_OFFSET || ENABLED(DUAL_X_CARRIAGE)
@@ -403,7 +402,7 @@ void MarlinSettings::postprocess() {
       for (uint8_t q = mesh_num_x * mesh_num_y; q--;) EEPROM_WRITE(dummy);
     #endif // MESH_BED_LEVELING
 
-    EEPROM_WRITE(suppl_zoffset);
+    EEPROM_WRITE(zprobe_zoffset);
 
     //
     // Planar Bed Leveling matrix
@@ -874,7 +873,7 @@ void MarlinSettings::postprocess() {
         for (uint16_t q = mesh_num_x * mesh_num_y; q--;) EEPROM_READ(dummy);
       #endif // MESH_BED_LEVELING
 
-      EEPROM_READ(suppl_zoffset);
+      EEPROM_READ(zprobe_zoffset);
 
       //
       // Planar Bed Leveling matrix
@@ -1421,7 +1420,7 @@ void MarlinSettings::reset() {
     reset_bed_level();
   #endif
 
-  suppl_zoffset = 0.0;
+  zprobe_zoffset = Z_PROBE_OFFSET_FROM_EXTRUDER;
 
   #if ENABLED(DELTA)
     const float adj[ABC] = DELTA_ENDSTOP_ADJ,
@@ -2025,12 +2024,12 @@ void MarlinSettings::reset() {
     /**
      * Probe Offset
      */
-    if (!forReplay) {
+      if (!forReplay) {
+        CONFIG_ECHO_START;
+        SERIAL_ECHOLNPGM("Z-Probe Offset (mm):");
+      }
       CONFIG_ECHO_START;
-      SERIAL_ECHOLNPGM("Z-Probe Offset (mm):");
-    }
-    CONFIG_ECHO_START;
-    SERIAL_ECHOLNPAIR("  M851 Z", LINEAR_UNIT(suppl_zoffset));
+      SERIAL_ECHOLNPAIR("  M851 Z", LINEAR_UNIT(zprobe_zoffset));
 
     /**
      * Bed Skew Correction

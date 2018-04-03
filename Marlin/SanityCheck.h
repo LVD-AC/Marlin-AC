@@ -227,8 +227,8 @@
   #error "UBL_MESH_(MIN|MAX)_[XY] is now just MESH_(MIN|MAX)_[XY]. Please update your configuration."
 #elif defined(ENABLE_MESH_EDIT_GFX_OVERLAY)
   #error "ENABLE_MESH_EDIT_GFX_OVERLAY is now MESH_EDIT_GFX_OVERLAY. Please update your configuration."
-#elif defined(BABYSTEP_ZOFFSET_GFX_REVERSE)
-  #error "BABYSTEP_ZOFFSET_GFX_REVERSE is now set by OVERLAY_GFX_REVERSE. Please update your configurations."
+#elif defined(BABYSTEP_ZPROBE_GFX_REVERSE)
+  #error "BABYSTEP_ZPROBE_GFX_REVERSE is now set by OVERLAY_GFX_REVERSE. Please update your configurations."
 #elif defined(UBL_GRANULAR_SEGMENTATION_FOR_CARTESIAN)
   #error "UBL_GRANULAR_SEGMENTATION_FOR_CARTESIAN is now SEGMENT_LEVELED_MOVES. Please update your configuration."
 #elif HAS_PID_HEATING && (defined(K1) || !defined(PID_K1))
@@ -268,13 +268,6 @@
 #ifndef USBCON
   #if ENABLED(SERIAL_XON_XOFF) && RX_BUFFER_SIZE < 1024
     #error "SERIAL_XON_XOFF requires RX_BUFFER_SIZE >= 1024 for reliable transfers without drops."
-  #endif
-
-  #if RX_BUFFER_SIZE && (RX_BUFFER_SIZE < 2 || !IS_POWER_OF_2(RX_BUFFER_SIZE))
-    #error "RX_BUFFER_SIZE must be a power of 2 greater than 1."
-  #endif
-
-  #if TX_BUFFER_SIZE && (TX_BUFFER_SIZE < 2 || TX_BUFFER_SIZE > 256 || !IS_POWER_OF_2(TX_BUFFER_SIZE))
   #elif RX_BUFFER_SIZE && (RX_BUFFER_SIZE < 2 || !IS_POWER_OF_2(RX_BUFFER_SIZE))
     #error "RX_BUFFER_SIZE must be a power of 2 greater than 1."
   #elif TX_BUFFER_SIZE && (TX_BUFFER_SIZE < 2 || TX_BUFFER_SIZE > 256 || !IS_POWER_OF_2(TX_BUFFER_SIZE))
@@ -385,12 +378,12 @@ static_assert(X_MAX_LENGTH >= X_BED_SIZE && Y_MAX_LENGTH >= Y_BED_SIZE,
     #error "BABYSTEPPING is not implemented for SCARA yet."
   #elif ENABLED(DELTA) && ENABLED(BABYSTEP_XY)
     #error "BABYSTEPPING only implemented for Z axis on deltabots."
-  #elif ENABLED(BABYSTEP_SUPPL_ZOFFSET) && ENABLED(MESH_BED_LEVELING)
-    #error "MESH_BED_LEVELING and BABYSTEP_SUPPL_ZOFFSET is not a valid combination"
-  #elif ENABLED(BABYSTEP_ZOFFSET_GFX_OVERLAY) && !ENABLED(DOGLCD)
-    #error "BABYSTEP_ZOFFSET_GFX_OVERLAY requires a DOGLCD."
-  #elif ENABLED(BABYSTEP_ZOFFSET_GFX_OVERLAY) && !ENABLED(BABYSTEP_SUPPL_ZOFFSET)
-    #error "BABYSTEP_ZOFFSET_GFX_OVERLAY requires a BABYSTEP_SUPPL_ZOFFSET."
+  #elif ENABLED(BABYSTEP_ZPROBE_OFFSET) && ENABLED(MESH_BED_LEVELING)
+    #error "MESH_BED_LEVELING and BABYSTEP_ZPROBE_OFFSET is not a valid combination"
+  #elif ENABLED(BABYSTEP_ZPROBE_GFX_OVERLAY) && !ENABLED(DOGLCD)
+    #error "BABYSTEP_ZPROBE_GFX_OVERLAY requires a DOGLCD."
+  #elif ENABLED(BABYSTEP_ZPROBE_GFX_OVERLAY) && !ENABLED(BABYSTEP_ZPROBE_OFFSET)
+    #error "BABYSTEP_ZPROBE_GFX_OVERLAY requires a BABYSTEP_ZPROBE_OFFSET."
   #endif
 #endif
 

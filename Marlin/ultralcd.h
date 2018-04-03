@@ -213,6 +213,10 @@ void lcd_reset_status();
   float lcd_z_offset_edit();
 #endif
 
+#if ENABLED(DELTA_AUTO_CALIBRATION) && !HAS_BED_PROBE
+  float lcd_probe_pt(const float &rx, const float &ry);
+#endif
+
 #if ENABLED(SD_REPRINT_LAST_SELECTED_FILE)
   void lcd_reselect_last_file();
 #endif

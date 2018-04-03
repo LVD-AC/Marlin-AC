@@ -161,7 +161,7 @@
 #define MSG_Z2_MIN                          "z2_min: "
 #define MSG_Z2_MAX                          "z2_max: "
 #define MSG_Z_PROBE                         "z_probe: "
-#define MSG_SUPPL_ZOFFSET                   "Probe Z Offset"
+#define MSG_PROBE_Z_OFFSET                  "Probe Z Offset"
 #define MSG_SKEW_MIN                        "min_skew_factor: "
 #define MSG_SKEW_MAX                        "max_skew_factor: "
 #define MSG_FILAMENT_RUNOUT_SENSOR          "filament: "

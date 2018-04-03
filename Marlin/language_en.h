@@ -723,8 +723,8 @@
 #ifndef MSG_FIRST
   #define MSG_FIRST                           _UxGT("first")
 #endif
-#ifndef MSG_SUPPL_ZOFFSET 
-  #define MSG_SUPPL_ZOFFSET                   _UxGT("Z Offset")
+#ifndef MSG_ZPROBE_ZOFFSET
+  #define MSG_ZPROBE_ZOFFSET                  _UxGT("Z Offset")
 #endif
 #ifndef MSG_BABYSTEP_X
   #define MSG_BABYSTEP_X                      _UxGT("Babystep X")
@@ -814,7 +814,7 @@
   #define MSG_DELTA_HEIGHT_CALIBRATE          _UxGT("Set Delta Height")
 #endif
 #ifndef MSG_DELTA_Z_OFFSET_CALIBRATE
-  #define MSG_DELTA_Z_OFFSET_CALIBRATE        _UxGT("Set Delta Z-offset")
+  #define MSG_DELTA_Z_OFFSET_CALIBRATE        _UxGT("Probe Z-offset")
 #endif
 #ifndef MSG_DELTA_DIAG_ROD
   #define MSG_DELTA_DIAG_ROD                  _UxGT("Diag Rod")
