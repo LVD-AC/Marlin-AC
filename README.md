@@ -15,6 +15,11 @@ This branch contains the latest tagged version of Marlin (currently 1.1.8(bis) â
 
 Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
 
+G-force8a-AC
+- update to pull requests
+- M212
+- S(etup) parameter
+
 G-force8-AC
 - more functions
 - engage M851 + LCD z_offset for no-probe deltas and all printers
