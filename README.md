@@ -3,17 +3,20 @@
 
 ## Marlin 1.1-AC
 
-This is the developers branch for Marlin-AC, always ahead of official Marlin. Finally the developments here will be 'approuved' and included in https://github.com/MarlinFirmware/Marlin. If features are shown as 'closed' they will only be available in Marlin-AC.
+This is the developers branch for Marlin-AC, always ahead of official Marlin. Some features will only be available in Marlin-AC.
 
 
 ## Stable Release Branch
 
-This branch contains the latest tagged version of Marlin (currently 1.1.8(bis) – Xmas 2017) with all the additional AC developments to date.
+This branch contains the final version of Marlin (1.1.9 – 31 july 2018) with all the additional AC developments to date.
 
 
-## Current Status: In Development
+## Current Status: Closed
 
-Marlin-AC is in constant development to make it perform better and more stable based on the feedback of the Marlin-AC community.
+
+G-force9-AC
+- merge update to final Marlin 1.1.9
+- including fix for the infamous M851 bug
 
 G-force8a-AC
 - update to pull requests
@@ -22,7 +25,7 @@ G-force8a-AC
 
 G-force8-AC
 - more functions
-- engage M851 + LCD z_offset for no-probe deltas and all printers
+- LCD z_offset for no-probe deltas and all printers
 
 Xmas-AC
 - merge update to Marlin 1.1.8
