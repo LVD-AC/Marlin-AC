@@ -74,7 +74,7 @@
 // User-specified version info of this build to display in [Pronterface, etc] terminal window during
 // startup. Implementation of an idea by Prof Braino to inform user that any changes made to this
 // build by the user have been successfully uploaded into firmware.
-#define STRING_CONFIG_H_AUTHOR "(LVD, G-force9-AC)" // Who made the changes.
+#define STRING_CONFIG_H_AUTHOR "(LVD, G-force10-AC)" // Who made the changes.
 #define SHOW_BOOTSCREEN
 #define STRING_SPLASH_LINE1 SHORT_BUILD_VERSION // will be shown during bootup in line 1
 #define STRING_SPLASH_LINE2 WEBSITE_URL         // will be shown during bootup in line 2
@@ -558,8 +558,8 @@
   // Center-to-center distance of the holes in the diagonal push rods.
   #define DELTA_DIAGONAL_ROD 218.0 // mm
 
-  // height from z=0 to home position
-  #define DELTA_HEIGHT 262.00 // get this value from auto calibrate
+  // height from z-min trigger position to home position
+  #define DELTA_HEIGHT 260.00 // get this value from auto calibrate
   #define DELTA_ENDSTOP_ADJ { 0.0, 0.0, 0.0 } // get these from auto calibrate
 
   // Horizontal distance bridged by diagonal push rods when effector is centered.
