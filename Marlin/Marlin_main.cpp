@@ -1349,7 +1349,7 @@ bool get_target_extruder_from_command(const uint16_t code) {
       }
     #elif ENABLED(DELTA)
       soft_endstop_min[axis] = base_min_pos(axis);
-      soft_endstop_max[axis] = axis == Z_AXIS ? delta_height - zprobe_zoffset : base_max_pos(axis);
+      soft_endstop_max[axis] = axis == Z_AXIS ? delta_height - zprobe_zoffset + Z_PROBE_OFFSET_FROM_EXTRUDER : base_max_pos(axis);
     #else
       soft_endstop_min[axis] = base_min_pos(axis);
       soft_endstop_max[axis] = base_max_pos(axis);
@@ -1479,7 +1479,7 @@ static void set_axis_is_at_home(const AxisEnum axis) {
     else
   #elif ENABLED(DELTA)
     if (axis == Z_AXIS)
-      current_position[axis] = delta_height - zprobe_zoffset;
+      current_position[axis] = delta_height - zprobe_zoffset + Z_PROBE_OFFSET_FROM_EXTRUDER;
     else
   #endif
   {
@@ -3929,7 +3929,7 @@ inline void gcode_G4() {
     #endif
 
     // Move all carriages together linearly until an endstop is hit.
-    current_position[X_AXIS] = current_position[Y_AXIS] = current_position[Z_AXIS] = (delta_height - zprobe_zoffset + 10);
+    current_position[X_AXIS] = current_position[Y_AXIS] = current_position[Z_AXIS] = (delta_height - zprobe_zoffset + Z_PROBE_OFFSET_FROM_EXTRUDER + 10);
     feedrate_mm_s = homing_feedrate(X_AXIS);
     buffer_line_to_current_position();
     planner.synchronize();
@@ -5650,9 +5650,9 @@ void home_all_axes() { gcode_G28(true); }
   /**
    *  - Probe a point
    */
-  static float calibration_probe(const float &nx, const float &ny, const bool stow) {
+  static float calibration_probe(const float &nx, const float &ny, const bool stow, const bool offset_probe) {
     #if HAS_BED_PROBE
-      return probe_pt(nx, ny, stow ? PROBE_PT_STOW : PROBE_PT_RAISE, 0, false);
+      return probe_pt(nx, ny, stow ? PROBE_PT_STOW : PROBE_PT_RAISE, 0, offset_probe);
     #else
       UNUSED(stow);
       return lcd_probe_pt(nx, ny);
@@ -5662,7 +5662,7 @@ void home_all_axes() { gcode_G28(true); }
   /**
    *  - Probe a grid
    */
-  static bool probe_calibration_points(float z_pt[NPP + 1], const int8_t probe_points, const bool towers_set, const bool stow_after_each) {
+  static bool probe_calibration_points(float z_pt[NPP + 1], const int8_t probe_points, const bool towers_set, const bool stow_after_each, const bool offset_probe) {
     const bool _0p_calibration      = probe_points == 0,
                _1p_calibration      = probe_points == 1 || probe_points == -1,
                _4p_calibration      = probe_points == 2,
@@ -5685,7 +5685,7 @@ void home_all_axes() { gcode_G28(true); }
     if (!_0p_calibration) {
 
       if (!_7p_no_intermediates && !_7p_4_intermediates && !_7p_11_intermediates) { // probe the center
-        z_pt[CEN] += calibration_probe(0, 0, stow_after_each);
+        z_pt[CEN] += calibration_probe(0, 0, stow_after_each, offset_probe);
         if (isnan(z_pt[CEN])) return false;
       }
 
@@ -5695,7 +5695,7 @@ void home_all_axes() { gcode_G28(true); }
         I_LOOP_CAL_PT(rad, start, steps) {
           const float a = RADIANS(210 + (360 / NPP) *  (rad - 1)),
                       r = delta_calibration_radius * 0.1;
-          z_pt[CEN] += calibration_probe(cos(a) * r, sin(a) * r, stow_after_each);
+          z_pt[CEN] += calibration_probe(cos(a) * r, sin(a) * r, stow_after_each, offset_probe);
           if (isnan(z_pt[CEN])) return false;
        }
         z_pt[CEN] /= float(_7p_2_intermediates ? 7 : probe_points);
@@ -5719,7 +5719,7 @@ void home_all_axes() { gcode_G28(true); }
             const float a = RADIANS(210 + (360 / NPP) *  (rad - 1)),
                         r = delta_calibration_radius * (1 - 0.1 * (zig_zag ? offset - circle : circle)),
                         interpol = fmod(rad, 1);
-            const float z_temp = calibration_probe(cos(a) * r, sin(a) * r, stow_after_each);
+            const float z_temp = calibration_probe(cos(a) * r, sin(a) * r, stow_after_each, offset_probe);
             if (isnan(z_temp)) return false;
             // split probe point to neighbouring calibration points
             z_pt[uint8_t(LROUND(rad - interpol + NPP - 1)) % NPP + 1] += z_temp * sq(cos(RADIANS(interpol * 90)));
@@ -5868,6 +5868,8 @@ void home_all_axes() { gcode_G28(true); }
    *      V3  Report settings and probe results
    *
    *   E   Engage the probe for each point
+   *   
+   *   O   probe at probe offset positions instead of nozzle positions
    */
   inline void gcode_G33() {
 
@@ -5898,6 +5900,8 @@ void home_all_axes() { gcode_G28(true); }
     }
 
     const bool stow_after_each = parser.seen('E');
+
+    const bool offset_probe = parser.seen('O');
 
     const bool _0p_calibration      = probe_points == 0,
                _1p_calibration      = probe_points == 1 || probe_points == -1,
@@ -5936,9 +5940,16 @@ void home_all_axes() { gcode_G28(true); }
       LOOP_CAL_RAD(axis) {
         const float a = RADIANS(210 + (360 / NPP) *  (axis - 1)),
                     r = delta_calibration_radius;
-        if (!position_is_reachable(cos(a) * r, sin(a) * r)) {
-          SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius is implausible.");
-          return;
+        if (offset_probe) {
+          if (!position_is_reachable_by_probe(cos(a) * r, sin(a) * r)) {
+            SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius for calibration is implausible.");
+            return;
+          }
+        } else {
+          if (!position_is_reachable(cos(a) * r, sin(a) * r)) {
+            SERIAL_PROTOCOLLNPGM("?(M665 B)ed radius for calibration is implausible.");
+            return;
+          }
         }
       }
     }
@@ -5965,7 +5976,7 @@ void home_all_axes() { gcode_G28(true); }
 
       // Probe the points
       zero_std_dev_old = zero_std_dev;
-      if (!probe_calibration_points(z_at_pt, probe_points, towers_set, stow_after_each)) {
+      if (!probe_calibration_points(z_at_pt, probe_points, towers_set, stow_after_each, offset_probe)) {
         SERIAL_PROTOCOLLNPGM("Correct delta settings with M665 and M666");
         return AC_CLEANUP();
       }
